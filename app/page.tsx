@@ -199,7 +199,7 @@ export default function Page(){
           </TabsList>
 
           <TabsContent value="results">
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-4 gap-4">
               <Card className="rounded-2xl">
                 <CardContent className="p-6 grid gap-1">
                   <div className="text-sm text-neutral-500">|Ψ(t)| (ampiezza)</div>
@@ -212,6 +212,15 @@ export default function Page(){
                   <div className="text-sm text-neutral-500">Arg(Ψ) (fase)</div>
                   <div className="text-3xl font-semibold">{fmt(psiPhase, 4)} rad</div>
                   <div className="text-xs text-neutral-500">Ω = {fmt(params.Omega,4)} rad/giorno · t = {fmt(params.tDays,2)} giorni</div>
+                </CardContent>
+              </Card>
+              <Card className="rounded-2xl">
+                <CardContent className="p-6 grid gap-1">
+                  <div className="text-sm text-neutral-500">Densità |Ψ|²</div>
+                  <div className="text-3xl font-semibold">{fmt(psiProbDensity, 4)}</div>
+                  <div className="text-xs text-neutral-500">
+                    Probabilità relativa di manifestazione
+                  </div>
                 </CardContent>
               </Card>
               <Card className="rounded-2xl">

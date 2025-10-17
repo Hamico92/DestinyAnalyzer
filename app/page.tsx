@@ -195,6 +195,7 @@ export default function Page(){
             <TabsTrigger value="charts">Grafici</TabsTrigger>
             <TabsTrigger value="suggestions">Suggerimenti</TabsTrigger>
             <TabsTrigger value="about">Formula</TabsTrigger>
+            <TabsTrigger value="legend">Legenda Ψ</TabsTrigger>
           </TabsList>
 
           <TabsContent value="results">
@@ -399,6 +400,96 @@ export default function Page(){
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="legend">
+            <Card className="rounded-2xl">
+              <CardContent className="p-6 grid gap-5 text-sm leading-relaxed">
+                <div className="text-lg font-semibold">Legenda del Valore Ψ(t)</div>
+          
+                <div className="font-mono text-xs overflow-x-auto p-3 bg-neutral-100 rounded-lg">
+                  Ψ(t) = Σ[(-1)^P · δ(i,j) + sgn(D) · |D| · K(D)] · e^(−iΩt) + ξ(t) · C(N) · [1 + B(t) · J(t)]
+                </div>
+          
+                {/* 1) Ampiezza |Ψ| */}
+                <div>
+                  <div className="text-sm font-medium mb-2">1) Ampiezza |Ψ(t)| — Intensità complessiva del potenziale</div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-neutral-500">
+                          <th className="py-2">Intervallo</th>
+                          <th className="py-2">Interpretazione</th>
+                          <th className="py-2">Azione</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-t"><td className="py-2">0.00–0.50</td><td className="py-2">Campo debole, dispersione</td><td className="py-2">Focalizza 1 obiettivo</td></tr>
+                        <tr className="border-t"><td className="py-2">0.51–1.50</td><td className="py-2">Stabilità neutra</td><td className="py-2">Aumenta δ(i,j) con feedback</td></tr>
+                        <tr className="border-t"><td className="py-2">1.51–3.00</td><td className="py-2">Coerenza parziale</td><td className="py-2">Mantieni ritmo e direzione</td></tr>
+                        <tr className="border-t"><td className="py-2">3.01–5.00</td><td className="py-2">Coerenza elevata</td><td className="py-2">Agisci ora</td></tr>
+                        <tr className="border-t"><td className="py-2">&gt; 5.00</td><td className="py-2">Risonanza eccessiva</td><td className="py-2">Rallenta, evita saturazione</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+          
+                {/* 2) Fase Arg(Ψ) */}
+                <div>
+                  <div className="text-sm font-medium mb-2">2) Fase Arg(Ψ) — Stato ciclico e orientamento temporale</div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-neutral-500">
+                          <th className="py-2">Arg(Ψ) (rad)</th>
+                          <th className="py-2">Fase</th>
+                          <th className="py-2">Significato</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-t"><td className="py-2">≈ 0</td><td className="py-2">Azione</td><td className="py-2">Allineamento, procedi</td></tr>
+                        <tr className="border-t"><td className="py-2">π/4→π/2</td><td className="py-2">Transizione</td><td className="py-2">Stabilizza decisioni</td></tr>
+                        <tr className="border-t"><td className="py-2">≈ π</td><td className="py-2">Inversione</td><td className="py-2">Overthinking, rischio auto-sabotaggio</td></tr>
+                        <tr className="border-t"><td className="py-2">&gt; π</td><td className="py-2">Retrograda</td><td className="py-2">Ripetizione pattern: rivedi K(D), sgn(D)</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+          
+                {/* 3) Densità |Ψ|² */}
+                <div>
+                  <div className="text-sm font-medium mb-2">3) Densità |Ψ|² — Potenziale manifestato</div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-neutral-500">
+                          <th className="py-2">|Ψ|²</th>
+                          <th className="py-2">Significato</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-t"><td className="py-2">&lt; 1</td><td className="py-2">Potenziale latente: serve azione</td></tr>
+                        <tr className="border-t"><td className="py-2">1–4</td><td className="py-2">Coerenza in crescita</td></tr>
+                        <tr className="border-t"><td className="py-2">4–9</td><td className="py-2">Campo coerente: alta probabilità</td></tr>
+                        <tr className="border-t"><td className="py-2">&gt; 9</td><td className="py-2">Sovrasaturazione: rischio interferenze</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+          
+                {/* 4) Mappa rapida */}
+                <div>
+                  <div className="text-sm font-medium mb-2">4) Mappa rapida</div>
+                  <div className="grid sm:grid-cols-3 gap-3 text-xs">
+                    <div className="p-3 rounded-xl bg-neutral-100"><div className="font-medium">Energia</div><div>|Ψ| — intensità del campo</div></div>
+                    <div className="p-3 rounded-xl bg-neutral-100"><div className="font-medium">Allineamento</div><div>Arg(Ψ) — timing e fase</div></div>
+                    <div className="p-3 rounded-xl bg-neutral-100"><div className="font-medium">Manifestazione</div><div>|Ψ|² — probabilità relativa</div></div>
+                  </div>
+                  <div className="text-xs text-neutral-500 mt-3">Nota: modello speculativo a scopo riflessivo/educativo.</div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
         </Tabs>
 
         <footer className="text-center text-xs text-neutral-500 py-6">© {new Date().getFullYear()} Destiny Ψ Analyzer — uso riflessivo/educativo.</footer>

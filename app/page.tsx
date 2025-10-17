@@ -180,7 +180,7 @@ export default function Page(){
             <Textarea value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder={"Esempio:\n\nVoglio cambiare lavoro entro 3 mesi ma continuo a rimandare. Il mio team è diviso. Ho notato strane coincidenze positive nelle ultime due settimane..."} className="min-h-[120px]"/>
             <div className="flex flex-wrap gap-3">
               <Button onClick={handleAnalyze}>Analizza</Button>
-              <Button variant="outline" onClick={()=>applyPreset("Esempio 1 — Daniele & Sofia")}>Applica Esempio 1</Button>
+              <Button variant="outline" onClick={()=>applyPreset("Esempio 1 — Daniele & Sofia")}>Esempio 1</Button>
               <Button variant="outline" onClick={()=>applyPreset("Esempio 2 — Carriera (placeholder)")}>Esempio 2</Button>
               <Button variant="outline" onClick={()=>applyPreset("Esempio 3 — Startup (placeholder)")}>Esempio 3</Button>
               <Button variant="outline" onClick={()=>applyPreset("Esempio 4 — Benessere (placeholder)")}>Esempio 4</Button>

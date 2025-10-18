@@ -110,6 +110,18 @@ const PRESETS: Record<string, Params> = {
   },
 };
 
+const PRESET_TEXT: Record<string, string> = {
+  "Esempio 1 — Daniele & Sofia": `SCENARIO: Daniele e la conquista di Sofia.
+
+Contesto: Daniele (29, architetto) ha incontrato Sofia (27, grafica freelance) tre settimane fa a una mostra. Hanno parlato a lungo e si sono scambiati i numeri. Da allora Daniele è bloccato dall'ansia: riscrive ogni messaggio molte volte, chiede consigli a più amici, pensa continuamente a lei ma non propone un incontro reale. Alcune sincronicità ci sono state (stessi messaggi allo stesso momento, gusti musicali in comune), ma lui rimanda sempre l'azione. Vorrebbe capire come sbloccare la situazione, scegliere il momento giusto e agire con autenticità per invitarla a uscire concretamente.`,
+
+  "Esempio 2 — Carriera (placeholder)": `Valuto se lasciare il mio impiego stabile per un ruolo più sfidante in un'altra azienda entro 60 giorni. Ho feedback positivi dal network, ma tendenza a rimandare le candidature e a perfezionare troppo il CV. Vorrei capire come massimizzare il timing e ridurre l'overthinking per inviare 5 candidature strategiche e preparare 2 colloqui simulati.`,
+
+  "Esempio 3 — Startup (placeholder)": `Sto lanciando una startup SaaS: ho un MVP funzionante e due potenziali mentor. Tre clienti pilota sono interessati. Devo decidere se aprire adesso la beta privata o attendere altre feature. Ho segnali di sincronicità ricorrenti e una scadenza fiera tra 30 giorni. Voglio un piano d'azione chiaro per massimizzare l'effetto rete e la coerenza delle decisioni.`,
+
+  "Esempio 4 — Benessere (placeholder)": `Voglio ristrutturare le mie abitudini di benessere: sonno, allenamento, alimentazione. Ho tentato più volte ma ricado nella routine. Ho un gruppo di amici pronti a supportarmi e un personal trainer disponibile. Vorrei definire micro-azioni settimanali, gestire i momenti di biforcazione (cene, viaggi) e sfruttare le sincronicità per restare in rotta per 8 settimane.`,
+};
+
 export default function Page(){
   const [prompt, setPrompt] = useState("");
   const [params, setParams] = useState<Params>({ P:0, delta:0.2, sgnD:0, absD:2, K:1, xi:0.2, CN:0, B:1, J:0, Omega:2*Math.PI/28, tDays:0 });
@@ -154,7 +166,13 @@ export default function Page(){
     setParams(prev => ({ ...prev, ...est } as Params));
   }
 
-  function applyPreset(name:string){ setParams(PRESETS[name]); }
+  function applyPreset(name:string){
+    const p = PRESETS[name];
+    if (!p) return;
+    setParams(p);
+    const txt = PRESET_TEXT[name];
+    if (txt) setPrompt(txt);
+  }
 
   function downloadJSON(){
     const blob = new Blob([JSON.stringify({ prompt, params, psi, psiMag, psiPhase, psiProbDensity, timestamp: new Date().toISOString() }, null, 2)], { type: "application/json" });

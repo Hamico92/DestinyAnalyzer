@@ -26,7 +26,6 @@ type Params = {
 };
 
 type BreakdownRow = { key: string; value: number; hint: string };
-type ContextType = 'relationship' | 'career' | 'business' | 'health' | 'finance' | 'personal' | 'unknown';
 
 function clamp(num: number, min: number, max: number) { return Math.min(max, Math.max(min, num)); }
 function complexExpMinusI(theta:number){ return { re: Math.cos(theta), im: -Math.sin(theta) }; }
@@ -78,288 +77,174 @@ function computePsi(params: Params){
 
 function fmt(n:number, d=3){ return Number.isFinite(n) ? n.toFixed(d) : "–"; }
 
-// NUOVO SISTEMA DI CONSIGLI CONTESTUALI
-function detectContext(prompt: string): ContextType {
-  const text = prompt.toLowerCase();
-  
-  if (/(lei|lui|ragazza|ragazzo|fidanzat|amore|coppia|matrimonio|ex|tinder|appuntamento|conquistare|frequento|innamorat|relazione)/.test(text)) {
-    return 'relationship';
-  }
-  
-  if (/(lavoro|carriera|colloquio|cv|curriculum|dimission|assunzione|promozione|capo|manager|stipendio|linkedin|candidatura)/.test(text)) {
-    return 'career';
-  }
-  
-  if (/(startup|business|azienda|cliente|investitor|pitch|mvp|saas|revenue|vendite|marketing|funding)/.test(text)) {
-    return 'business';
-  }
-  
-  if (/(salute|dieta|allenamento|peso|palestra|sonno|stress|ansia|depressione|terapia|meditazione)/.test(text)) {
-    return 'health';
-  }
-  
-  if (/(soldi|risparmio|debito|investimento|mutuo|prestito|bitcoin|azioni|trading|budget)/.test(text)) {
-    return 'finance';
-  }
-  
-  if (/(obiettivo|sogno|crescita personale|cambiare|migliorare|imparare|studiare|corso)/.test(text)) {
-    return 'personal';
-  }
-  
-  return 'unknown';
-}
-
-function generateRelationshipAdvice(params: Params, text: string, tips: { pros: string[]; cons: string[]; actions: string[] }) {
-  if (/lei|lui/.test(text)) {
-    if (params.delta < 0.3) {
-      tips.cons.push("⚠️ Connessione molto bassa (δ < 0.3): manca reciprocità");
-      tips.actions.push("💬 Proponi 1 attività concreta entro 48h per testare interesse reale");
-    }
-    
-    if (params.sgnD < 0) {
-      tips.cons.push("🚩 Pattern negativo rilevato nella relazione");
-      tips.actions.push("🛑 Stop azioni controproducenti: identifica e blocca 1 comportamento tossico");
-    }
-    
-    if (params.delta >= 0.4 && params.delta <= 0.6) {
-      tips.pros.push("✅ Reciprocità equilibrata: base sana per procedere");
-    }
-  }
-  
-  if (params.P === 1) {
-    tips.actions.push("📱 Regola dei 3 secondi: pensa 3 sec, poi invia il messaggio");
-    tips.actions.push("🚫 Blocca 'chiedi consiglio': decidi tu, sbaglia tu, impara tu");
-  }
-  
-  if (/altr[oa]|ragazzo|ragazza|competitor|rival|insieme/.test(text)) {
-    tips.cons.push("⚔️ Presenza di competitor/barriera: ostacolo significativo (B alto)");
-    tips.actions.push("🎯 Focus su TE: smetti confronti, diventa versione migliore");
-  }
-  
-  if (phase({re: computePsi(params).re, im: computePsi(params).im}) > 2.5) {
-    tips.actions.push("⏳ Fase non ottimale: aspetta 3-7 giorni prima di azione importante");
-  }
-  
-  if (/messaggio|chat|scrive/.test(text) && params.P === 1) {
-    tips.cons.push("♾️ Overthinking sui messaggi: paralisi comunicativa");
-    tips.actions.push("⏰ Max 2 minuti per scrivere messaggio: poi INVIA");
-  }
-}
-
-function generateCareerAdvice(params: Params, text: string, tips: { pros: string[]; cons: string[]; actions: string[] }) {
-  if (/cambiare lavoro|dimission|cerco lavoro/.test(text)) {
-    if (params.absD < 3) {
-      tips.cons.push("📉 Intensità decisionale bassa: rischio di rimandare indefinitamente");
-      tips.actions.push("📧 Invia 3 candidature OGGI, non domani");
-    }
-    
-    if (params.K < 1) {
-      tips.cons.push("⚖️ Karma negativo: promesse non mantenute pesano sulla credibilità");
-      tips.actions.push("✅ Completa 1 task lasciato a metà prima di cercare nuovo");
-    }
-    
-    if (params.absD >= 5) {
-      tips.pros.push("🔥 Alta intensità decisionale: momentum favorevole per il cambio");
-    }
-  }
-  
-  if (/cv|curriculum|linkedin/.test(text) && params.P === 1) {
-    tips.cons.push("♾️ Perfezionismo paralizzante sul CV");
-    tips.actions.push("⏰ 2 ore MAX per CV: poi INVIA anche se imperfetto (80% è sufficiente)");
-  }
-  
-  if (/colloquio|interview/.test(text)) {
-    tips.actions.push("🎭 Simula 2 colloqui con amico/specchio entro 24h");
-    tips.actions.push("📝 Prepara 3 domande intelligenti da fare TU all'azienda");
-  }
-  
-  if (/stipendio|aumento|salario/.test(text)) {
-    tips.actions.push("💰 Ricerca benchmark salariali per il tuo ruolo nella tua zona");
-    tips.actions.push("📊 Documenta 3 risultati concreti ottenuti negli ultimi 6 mesi");
-  }
-}
-
-function generateBusinessAdvice(params: Params, text: string, tips: { pros: string[]; cons: string[]; actions: string[] }) {
-  if (/startup|mvp|lancio/.test(text)) {
-    if (params.B >= 3) {
-      tips.pros.push("🔥 Momento di biforcazione critico: finestra di opportunità aperta");
-      tips.actions.push("🚀 Lancia MVP OGGI: 80% fatto e pubblico > 100% perfetto mai rilasciato");
-    }
-    
-    if (params.CN < 0) {
-      tips.cons.push("👥 Network tossico: circondato da persone/influenze sbagliate");
-      tips.actions.push("🔄 Sostituisci 1 contatto negativo con 1 mentor positivo");
-    }
-    
-    if (params.J >= 2) {
-      tips.pros.push("✨ Sincronicità rilevanti: segnali di allineamento favorevole");
-    }
-  }
-  
-  if (/cliente|vendita|pitch/.test(text)) {
-    tips.actions.push("📞 Contatta 5 potenziali clienti OGGI, non 'quando sarai pronto'");
-    tips.actions.push("💡 Offri test gratuito 7 giorni: elimina barriera all'ingresso");
-  }
-  
-  if (/investitor|funding/.test(text)) {
-    tips.actions.push("🎯 Pitch di 60 secondi: elevator pitch testato con 3 persone");
-    tips.actions.push("📈 Prepara 3 metriche chiave: traction, crescita, validazione mercato");
-  }
-}
-
-function generateHealthAdvice(params: Params, text: string, tips: { pros: string[]; cons: string[]; actions: string[] }) {
-  if (/dieta|peso|allenamento/.test(text)) {
-    if (params.absD < 2) {
-      tips.cons.push("📊 Intensità troppo bassa: non vedrai risultati significativi");
-      tips.actions.push("💪 Mini-azione OGGI: 20 flessioni + 1 pasto sano completo");
-    }
-    
-    tips.actions.push("📅 Traccia per 7 giorni: cibo + allenamento + sonno");
-    tips.actions.push("👥 Trova accountability partner: check-in giornaliero reciproco");
-  }
-  
-  if (/palestra|gym/.test(text) && params.P === 1) {
-    tips.cons.push("🤔 Overthinking sul programma: paralisi da troppe opzioni");
-    tips.actions.push("🏋️ Scegli 1 programma semplice e seguilo per 30 giorni senza cambiare");
-  }
-  
-  if (params.K >= 2) {
-    tips.pros.push("💪 Buona storia di coerenza: le azioni passate supportano il cambiamento");
-  }
-}
-
-function generateFinanceAdvice(params: Params, text: string, tips: { pros: string[]; cons: string[]; actions: string[] }) {
-  if (/risparmio|debito|investimento/.test(text)) {
-    tips.actions.push("💰 Applica regola 50/30/20: 50% necessità, 30% desideri, 20% risparmio");
-    tips.actions.push("📊 Traccia OGNI spesa per 30 giorni: awareness = primo passo cambiamento");
-  }
-  
-  if (params.sgnD < 0) {
-    tips.cons.push("💸 Pattern di spesa negativo rilevato");
-    tips.actions.push("🛑 Elimina 1 abbonamento inutile OGGI (streaming, app, servizio)");
-  }
-  
-  if (/investimento|azioni|crypto/.test(text) && params.P === 1) {
-    tips.cons.push("📉 Overthinking paralizza: analisi perfetta non esiste");
-    tips.actions.push("🎯 Inizia con piccola somma (5-10% disponibile) e impara facendo");
-  }
-}
-
-function generatePersonalAdvice(params: Params, text: string, tips: { pros: string[]; cons: string[]; actions: string[] }) {
-  if (/imparare|studiare|corso/.test(text)) {
-    if (params.P === 1) {
-      tips.cons.push("📚 Troppi corsi, poca azione: information overload");
-      tips.actions.push("🎯 STOP nuovi corsi: finisci 1 che hai iniziato prima di comprarne altri");
-    }
-    
-    tips.actions.push("⏰ Studia 25 min/giorno: consistenza batte intensità sporadica");
-  }
-  
-  if (/obiettivo|sogno/.test(text)) {
-    if (params.absD >= 4) {
-      tips.pros.push("🎯 Chiara direzione verso l'obiettivo: focus ben definito");
-    }
-    tips.actions.push("📝 Spezza obiettivo in 3 micro-task da 15 minuti ciascuno");
-  }
-}
-
-function generateContextualAdvice(params: Params, prompt: string) {
-  const context = detectContext(prompt);
-  const text = prompt.toLowerCase();
-  
+// SISTEMA SUGGERIMENTI UNIVERSALE BASATO SOLO SUI PARAMETRI NUMERICI
+function generateAdvice(params: Params) {
   const tips: { pros: string[]; cons: string[]; actions: string[] } = { 
     pros: [], 
     cons: [], 
     actions: [] 
   };
   
-  // CONSIGLI GENERALI BASE
+  const psi = computePsi(params);
+  const psiMag = mag(psi);
+  const psiProbDensity = psiMag * psiMag;
+  const psiPhase = phase(psi);
+  
+  // ========== ANALISI DENSITÀ |Ψ|² (Probabilità Manifestazione) ==========
+  if (psiProbDensity < 0.15) {
+    tips.cons.push("📉 Densità |Ψ|² < 15%: probabilità manifestazione molto bassa");
+    tips.actions.push("🔍 Rivaluta obiettivo: con <15% probabilità, vale davvero la pena investire energia?");
+    tips.actions.push("🔄 Considera pivot completo: cambia target o approccio radicalmente");
+  } else if (psiProbDensity >= 0.15 && psiProbDensity < 0.30) {
+    tips.cons.push("⚠️ Densità |Ψ|² = " + fmt(psiProbDensity, 2) + " (15-30%): probabilità bassa");
+    tips.actions.push("📊 Analizza costo-beneficio: energia investita vs probabilità successo");
+    tips.actions.push("⚡ Per superare 30%: aumenta |D| (intensità) o δ (reciprocità)");
+  } else if (psiProbDensity >= 0.30 && psiProbDensity < 0.50) {
+    tips.pros.push("📈 Densità |Ψ|² = " + fmt(psiProbDensity, 2) + " (30-50%): probabilità moderata");
+    tips.actions.push("🎯 Zona grigia: serve 1 azione decisiva per spostare sopra 50%");
+  } else if (psiProbDensity >= 0.50 && psiProbDensity < 1.0) {
+    tips.pros.push("✅ Densità |Ψ|² = " + fmt(psiProbDensity, 2) + " (50-100%): buona probabilità");
+    tips.actions.push("🚀 Mantieni momentum: continua azioni coerenti");
+  } else if (psiProbDensity >= 1.0 && psiProbDensity < 4.0) {
+    tips.pros.push("🔥 Densità |Ψ|² = " + fmt(psiProbDensity, 2) + ": alta coerenza campo");
+    tips.actions.push("⚡ Agisci ORA: momento favorevole, non rimandare");
+  } else if (psiProbDensity >= 4.0) {
+    tips.cons.push("⚡ Densità |Ψ|² > 4: possibile sovrasaturazione");
+    tips.actions.push("🧘 Rallenta: troppa intensità può generare resistenza/burnout");
+  }
+  
+  // ========== ANALISI OVERTHINKING (P) ==========
   if (params.P === 0) {
-    tips.pros.push("✅ Energia non invertita: buona base mentale per agire");
+    tips.pros.push("✅ P=0: energia non invertita, nessun overthinking rilevato");
   } else {
-    tips.cons.push("🧠 Overthinking rilevato: rischio paralisi da analisi");
-    tips.actions.push("⏰ Imposta timer 25 min: pensa SOLO in quel tempo, poi AGISCI");
+    tips.cons.push("🧠 P=1: overthinking attivo, inversione energetica (-1)^P = -1");
+    tips.actions.push("⏰ Finestra decisionale: 25 min pensiero MAX, poi azione obbligatoria");
+    tips.actions.push("🚫 Stop ricerca consiglio: decide CHI agisce, non chi pensa");
   }
   
-  if (params.sgnD > 0) {
-    tips.pros.push("➕ Direzione decisionale costruttiva");
-  }
-  if (params.sgnD < 0) {
-    tips.cons.push("➖ Pattern di auto-sabotaggio/evitamento rilevato");
-    tips.actions.push("🔄 Sostituisci 1 azione negativa con 1 micro-azione costruttiva oggi");
+  // ========== ANALISI RECIPROCITÀ/CONNESSIONE (δ) ==========
+  if (params.delta < 0.2) {
+    tips.cons.push("⚠️ δ=" + fmt(params.delta, 2) + " < 0.2: connessione/reciprocità quasi nulla");
+    tips.actions.push("🤝 Test reciprocità: proponi 1 interazione e osserva risposta entro 48h");
+    tips.actions.push("❌ Se nessuna risposta → accetta realtà e redirect energia altrove");
+  } else if (params.delta >= 0.2 && params.delta < 0.4) {
+    tips.cons.push("📉 δ=" + fmt(params.delta, 2) + " (0.2-0.4): reciprocità bassa");
+    tips.actions.push("📈 Aumenta δ: proponi 1 scambio paritario concreto (non unilaterale)");
+  } else if (params.delta >= 0.4 && params.delta <= 0.7) {
+    tips.pros.push("🔗 δ=" + fmt(params.delta, 2) + " (0.4-0.7): reciprocità equilibrata");
+  } else if (params.delta > 0.7) {
+    tips.pros.push("⚡ δ=" + fmt(params.delta, 2) + " > 0.7: alta sincronia/connessione");
+    if (psiProbDensity < 0.5) {
+      tips.cons.push("⚠️ PARADOSSO: δ alto ma |Ψ|² basso → altri fattori bloccano");
+      tips.actions.push("🔍 Analizza: se δ è alto ma risultato basso, controlla sgn(D), K, B");
+    }
   }
   
-  if (params.absD < 3) {
-    tips.actions.push("⚡ Aumenta intensità: esegui 1 azione di livello ≥4 entro 24h");
+  // ========== ANALISI DIREZIONE (sgn(D)) ==========
+  if (params.sgnD > 0.3) {
+    tips.pros.push("➕ sgn(D)=" + fmt(params.sgnD, 2) + " positivo: direzione costruttiva");
+  } else if (params.sgnD >= -0.3 && params.sgnD <= 0.3) {
+    tips.cons.push("⚖️ sgn(D)=" + fmt(params.sgnD, 2) + " neutro: azioni senza direzione chiara");
+    tips.actions.push("🎯 Definisci direzione: 1 azione esplicitamente costruttiva entro 24h");
   } else {
-    tips.pros.push("💪 Intensità sufficiente per spostare l'ago della bilancia");
+    tips.cons.push("➖ sgn(D)=" + fmt(params.sgnD, 2) + " negativo: pattern auto-sabotaggio");
+    tips.actions.push("🛑 STOP 1 comportamento distruttivo: identifica e blocca");
+    tips.actions.push("🔄 Sostituisci: per ogni azione negativa, 1 micro-azione +");
   }
   
-  if (params.K > 1) {
-    tips.pros.push("🔁 Amplificazione karmica positiva: azioni passate ti supportano");
-  }
-  if (params.K < 1) {
-    tips.actions.push("⚖️ Rimedia a 1 promessa rotta, completa 1 task aperto: rialza K(D)");
-  }
-  
-  if (params.delta < 0.4) {
-    tips.actions.push("🤝 Aumenta δ(i,j): proponi interazione concreta e reciproca");
+  // ========== ANALISI INTENSITÀ (|D|) ==========
+  if (params.absD < 2) {
+    tips.cons.push("📊 |D|=" + fmt(params.absD, 1) + " < 2: intensità troppo bassa");
+    tips.actions.push("⚡ Aumenta |D|: esegui 1 azione livello ≥4 entro 24h");
+  } else if (params.absD >= 2 && params.absD <= 5) {
+    tips.pros.push("📈 |D|=" + fmt(params.absD, 1) + " (2-5): intensità sufficiente");
+  } else if (params.absD > 5 && params.absD <= 8) {
+    tips.pros.push("🔥 |D|=" + fmt(params.absD, 1) + " alta: impegno significativo");
   } else {
-    tips.pros.push("🔗 Buona sincronia/reciprocità percepita");
+    tips.cons.push("⚠️ |D|=" + fmt(params.absD, 1) + " > 8: possibile iperattività/burnout");
+    tips.actions.push("🧘 Modera intensità: qualità > quantità nelle prossime 48h");
   }
   
-  if (params.CN < 0) {
-    tips.cons.push("👥 Influenza di network negativa");
-    tips.actions.push("🔄 Riduci esposizione a fonti tossiche di -50% per 7 giorni, aggiungi 1 mentor +");
+  // ========== ANALISI AMPLIFICAZIONE KARMICA (K) ==========
+  if (params.K < 0.8) {
+    tips.cons.push("⚖️ K=" + fmt(params.K, 2) + " < 0.8: karma negativo, promesse rotte pesano");
+    tips.actions.push("✅ Ripristina K: completa 1 impegno aperto o ripara 1 promessa");
+  } else if (params.K >= 0.8 && params.K <= 1.5) {
+    tips.pros.push("⚖️ K=" + fmt(params.K, 2) + " neutro: storia azioni equilibrata");
+  } else {
+    tips.pros.push("🔁 K=" + fmt(params.K, 2) + " > 1.5: amplificazione positiva, azioni passate aiutano");
   }
   
-  if (params.J > 2) {
-    tips.pros.push("✨ Pattern di sincronicità rilevanti: sfrutta il momentum");
+  // ========== ANALISI RETE (C(N)) ==========
+  if (params.CN < -0.3) {
+    tips.cons.push("👥 C(N)=" + fmt(params.CN, 2) + " < -0.3: influenza network negativa");
+    tips.actions.push("🔄 Detox rete: -50% esposizione fonti tossiche per 7 giorni");
+    tips.actions.push("➕ Aggiungi 1 mentor/contatto positivo entro 10 giorni");
+  } else if (params.CN >= -0.3 && params.CN <= 0.3) {
+    tips.pros.push("👥 C(N)=" + fmt(params.CN, 2) + " neutro: network non influisce significativamente");
+  } else {
+    tips.pros.push("👥 C(N)=" + fmt(params.CN, 2) + " > 0.3: supporto network positivo");
   }
   
+  // ========== ANALISI BIFORCAZIONE (B) ==========
   if (params.B >= 3) {
-    tips.actions.push("🔀 Siamo in biforcazione: applica 'slow is smooth, smooth is fast' prima di impegnarti");
+    tips.pros.push("🔀 B=" + fmt(params.B, 1) + " ≥ 3: momento critico/biforcazione");
+    tips.actions.push("⏱️ Decisione entro 48-72h: finestra opportunità o rischio imminente");
+    tips.actions.push("🎯 Regola 'slow is smooth': pensa chiaro, poi agisci deciso");
+  } else if (params.B >= 1.5 && params.B < 3) {
+    tips.pros.push("⚖️ B=" + fmt(params.B, 1) + " (1.5-3): complessità moderata");
   }
   
-  // CONSIGLI CONTESTUALI SPECIFICI
-  switch(context) {
-    case 'relationship':
-      generateRelationshipAdvice(params, text, tips);
-      break;
-    case 'career':
-      generateCareerAdvice(params, text, tips);
-      break;
-    case 'business':
-      generateBusinessAdvice(params, text, tips);
-      break;
-    case 'health':
-      generateHealthAdvice(params, text, tips);
-      break;
-    case 'finance':
-      generateFinanceAdvice(params, text, tips);
-      break;
-    case 'personal':
-      generatePersonalAdvice(params, text, tips);
-      break;
+  // ========== ANALISI SINCRONICITÀ (J) ==========
+  if (params.J >= 2) {
+    tips.pros.push("✨ J=" + fmt(params.J, 1) + " ≥ 2: pattern sincronicità rilevanti");
+    tips.actions.push("🎯 Sfrutta momentum: agisci mentre 'vento è favorevole'");
+  } else if (params.J < 0.5) {
+    tips.cons.push("📉 J=" + fmt(params.J, 1) + " < 0.5: zero segnali sincronici");
   }
   
-  // ANALISI OSTACOLI TRASVERSALI
-  if (/paura|timore|spavento/.test(text)) {
-    tips.actions.push("🎯 Identifica paura specifica: cosa è il PEGGIO che può succedere?");
-    tips.actions.push("📝 Scrivi 3 scenari: worst case, likely case, best case");
+  // ========== ANALISI FASE Arg(Ψ) ==========
+  const phaseNorm = ((psiPhase % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  if (phaseNorm >= 0 && phaseNorm < Math.PI / 4) {
+    tips.pros.push("🎯 Fase ≈ 0: allineamento ciclico, momento azione");
+  } else if (phaseNorm >= Math.PI * 0.75 && phaseNorm <= Math.PI * 1.25) {
+    tips.cons.push("🔄 Fase ≈ π: inversione ciclica, possibile auto-sabotaggio");
+    tips.actions.push("⏳ Aspetta 3-7 giorni prima di decisioni critiche");
+  } else if (phaseNorm > Math.PI * 1.25) {
+    tips.cons.push("↩️ Fase > π: retrograda, ripetizione pattern passati");
+    tips.actions.push("🔍 Rivedi K(D) e sgn(D): stai ripetendo errori?");
   }
   
-  if (/tempo|fretta|urgenza|scadenza/.test(text)) {
-    tips.actions.push("⏱️ Priorità: fai la cosa più importante ORA, il resto dopo");
+  // ========== INTERAZIONI CRITICHE ==========
+  
+  // Delta alto + Probabilità bassa = ILLUSIONE
+  if (params.delta >= 0.5 && psiProbDensity < 0.30) {
+    tips.cons.push("💔 PARADOSSO: δ=" + fmt(params.delta, 2) + " alto ma |Ψ|²=" + fmt(psiProbDensity, 2) + " basso");
+    tips.actions.push("🔍 Connessione c'è ma bloccata: analizza sgn(D), B(t), K(D)");
+    tips.actions.push("❌ Se altri fattori immutabili → accetta che δ alto NON basta");
   }
   
-  if (/soldi|costo|prezzo|budget/.test(text) && params.absD < 3 && context !== 'finance') {
-    tips.actions.push("💰 Trova versione $0 dell'azione: cosa puoi fare GRATIS oggi?");
+  // Intensità alta + Direzione negativa = SPRECO ENERGIA
+  if (params.absD >= 5 && params.sgnD < -0.3) {
+    tips.cons.push("⚠️ SPRECO: alta intensità (|D|=" + fmt(params.absD, 1) + ") in direzione negativa");
+    tips.actions.push("🛑 STOP immediato: stai danneggiando attivamente con impegno alto");
   }
   
-  // Assicurati che ci siano almeno alcuni consigli
+  // Overthinking + Biforcazione = PARALISI CRITICA
+  if (params.P === 1 && params.B >= 3) {
+    tips.cons.push("🚨 PARALISI CRITICA: overthinking in momento decisivo");
+    tips.actions.push("⏰ Timer 1 ora: decidi ADESSO, deadline non negoziabile");
+  }
+  
+  // Probabilità bassissima (<20%) + Intensità alta
+  if (psiProbDensity < 0.20 && params.absD >= 4) {
+    tips.cons.push("💸 INEFFICIENZA: alta energia su probabilità <20%");
+    tips.actions.push("🔄 Redirect urgente: stesso sforzo su target con >40% probabilità");
+  }
+  
+  // Assicura almeno 1 azione
   if (tips.actions.length === 0) {
-    tips.actions.push("📋 Identifica la prossima azione più piccola possibile e falla OGGI");
+    tips.actions.push("📋 Prossima azione più piccola possibile: esegui OGGI entro 24h");
   }
   
   return tips;
@@ -383,7 +268,7 @@ const PRESETS: Record<string, Params> = {
 const PRESET_TEXT: Record<string, string> = {
   "Esempio 1 — Daniele & Sofia": `SCENARIO: Daniele e la conquista di Sofia.
 
-Contesto: Daniele (29, architetto) ha incontrato Sofia (27, grafica freelance) tre settimane fa a una mostra. Hanno parlato a lungo e si sono scambiati i numeri. Da allora Daniele è bloccato dall'ansia: riscrive ogni messaggio molte volte, chiede consigli a più amici, pensa continuamente a lei ma non propone un incontro reale. Alcune sincronicità ci sono state (stessi messaggi allo stesso momento, gusti musicali in comune), ma lui rimanda sempre l'azione. Vorrebbe capire come sbloccare la situazione, scegliere il momento giusto e agire con autenticità per invitarla a uscire concretamente.`,
+Contesto: Daniele (29, architetto) ha incontrato Sofia (27, grafica freelance) tre settimane fa a una mostra. Hanno parlato a lungo e si sono scambiati i numeri. Da allora Daniele è bloccato dall'ansia: riscrive ogni messaggio molte volte, chiede consigli a più amici, pensa continuamente a lei ma non propone un incontro reale. Alcune sincronicità ci sono state (stessi messaggi allo stesso momento, gusti musicali in common), ma lui rimanda sempre l'azione. Vorrebbe capire come sbloccare la situazione, scegliere il momento giusto e agire con autenticità per invitarla a uscire concretamente.`,
 
   "Esempio 2 — Carriera (placeholder)": `Valuto se lasciare il mio impiego stabile per un ruolo più sfidante in un'altra azienda entro 60 giorni. Ho feedback positivi dal network, ma tendenza a rimandare le candidature e a perfezionare troppo il CV. Vorrei capire come massimizzare il timing e ridurre l'overthinking per inviare 5 candidature strategiche e preparare 2 colloqui simulati.`,
 
@@ -418,7 +303,7 @@ export default function Page(){
   const psiMag = mag(psi);
   const psiPhase = phase(psi);
   const psiProbDensity = psiMag*psiMag;
-  const tips = useMemo(()=>generateContextualAdvice(params, prompt), [params, prompt]);
+  const tips = useMemo(()=>generateAdvice(params), [params]);
 
   const radarData = [
     { metric: "Connessione δ", value: clamp(params.delta, 0, 1) },
@@ -654,7 +539,7 @@ export default function Page(){
                 <CardContent className="p-6">
                   <div className="text-sm font-medium mb-3">✅ PRO — Elementi favorevoli</div>
                   <ul className="list-disc pl-5 space-y-2 text-sm">
-                    {tips.pros.length > 0 ? tips.pros.map((t,i)=>(<li key={i}>{t}</li>)) : <li className="text-neutral-400">Nessun elemento favorevole rilevato</li>}
+                    {tips.pros.length > 0 ? tips.pros.map((t,i)=>(<li key={i}>{t}</li>)) : <li className="text-neutral-400">Nessun elemento favorevole rilevato con parametri attuali</li>}
                   </ul>
                 </CardContent>
               </Card>
@@ -662,7 +547,7 @@ export default function Page(){
                 <CardContent className="p-6">
                   <div className="text-sm font-medium mb-3">⚠️ CONTRO — Rischi e ostacoli</div>
                   <ul className="list-disc pl-5 space-y-2 text-sm">
-                    {tips.cons.length > 0 ? tips.cons.map((t,i)=>(<li key={i}>{t}</li>)) : <li className="text-neutral-400">Nessun rischio critico rilevato</li>}
+                    {tips.cons.length > 0 ? tips.cons.map((t,i)=>(<li key={i}>{t}</li>)) : <li className="text-neutral-400">Nessun rischio critico rilevato con parametri attuali</li>}
                   </ul>
                 </CardContent>
               </Card>

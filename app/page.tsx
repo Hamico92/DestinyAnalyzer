@@ -268,62 +268,42 @@ function generateAdvice(params: Params, language: 'it' | 'en') {
   return tips;
 }
 
-const PRESETS = {
-  it: {
-    "Esempio 1": {
-      params: {
-        P: 1, delta: 0.44, sgnD: -0.57, absD: 1.07, K: 0.87, xi: 0.15, CN: -0.046, B: 3.94, J: 2.5, Omega: 2*Math.PI/28, tDays: 21,
-      } as Params,
-      text: `SCENARIO: Daniele e la conquista di Sofia.
-
-Contesto: Daniele (29, architetto) ha incontrato Sofia (27, grafica freelance) tre settimane fa a una mostra. Hanno parlato a lungo e si sono scambiati i numeri. Da allora Daniele è bloccato dall'ansia: riscrive ogni messaggio molte volte, chiede consigli a più amici, pensa continuamente a lei ma non propone un incontro reale. Alcune sincronicità ci sono state (stessi messaggi allo stesso momento, gusti musicali in comune), ma lui rimanda sempre l'azione. Vorrebbe capire come sbloccare la situazione, scegliere il momento giusto e agire con autenticità per invitarla a uscire concretamente.`,
-    },
-    "Esempio 2": {
-      params: {
-        P: 0, delta: 0.35, sgnD: 0.4, absD: 5.2, K: 2.8, xi: 0.6, CN: 0.12, B: 2.2, J: 1.0, Omega: 2*Math.PI/33, tDays: 46,
-      } as Params,
-      text: `Valuto se lasciare il mio impiego stabile per un ruolo più sfidante in un'altra azienda entro 60 giorni. Ho feedback positivi dal network, ma tendenza a rimandare le candidature e a perfezionare troppo il CV. Vorrei capire come massimizzare il timing e ridurre l'overthinking per inviare 5 candidature strategiche e preparare 2 colloqui simulati.`,
-    },
-    "Esempio 3": {
-      params: {
-        P: 0, delta: 0.5, sgnD: 0.7, absD: 6.5, K: 3.6, xi: 0.9, CN: 0.2, B: 4.4, J: 1.8, Omega: 2*Math.PI/58, tDays: 120,
-      } as Params,
-      text: `Sto lanciando una startup SaaS: ho un MVP funzionante e due potenziali mentor. Tre clienti pilota sono interessati. Devo decidere se aprire adesso la beta privata o attendere altre feature. Ho segnali di sincronicità ricorrenti e una scadenza fiera tra 30 giorni. Voglio un piano d'azione chiaro per massimizzare l'effetto rete e la coerenza delle decisioni.`,
-    },
-    "Esempio 4": {
-      params: {
-        P: 0, delta: 0.3, sgnD: 0.2, absD: 4.0, K: 1.6, xi: 0.5, CN: 0.05, B: 1.1, J: 0.6, Omega: 2*Math.PI/23, tDays: 12,
-      } as Params,
-      text: `Voglio ristrutturare le mie abitudini di benessere: sonno, allenamento, alimentazione. Ho tentato più volte ma ricado nella routine. Ho un gruppo di amici pronti a supportarmi e un personal trainer disponibile. Vorrei definire micro-azioni settimanali, gestire i momenti di biforcazione (cene, viaggi) e sfruttare le sincronicità per restare in rotta per 8 settimane.`,
-    },
+const PRESETS: Record<string, { params: Params; text: Record<'it' | 'en', string> }> = {
+  "1": {
+    params: {
+      P: 1, delta: 0.44, sgnD: -0.57, absD: 1.07, K: 0.87, xi: 0.15, CN: -0.046, B: 3.94, J: 2.5, Omega: 2*Math.PI/28, tDays: 21,
+    } as Params,
+    text: {
+      it: `Daniele (29, architetto) ha incontrato Sofia (27, grafica freelance) tre settimane fa a una mostra. Hanno parlato a lungo e si sono scambiati i numeri. Da allora Daniele è bloccato dall'ansia: riscrive ogni messaggio molte volte, chiede consigli a più amici, pensa continuamente a lei ma non propone un incontro reale. Alcune sincronicità ci sono state (stessi messaggi allo stesso momento, gusti musicali in comune), ma lui rimanda sempre l'azione. Vorrebbe capire come sbloccare la situazione, scegliere il momento giusto e agire con autenticità per invitarla a uscire concretamente.`,
+      en: `Daniel (29, architect) met Sofia (27, freelance graphic designer) three weeks ago at an exhibition. They talked at length and exchanged numbers. Since then Daniel has been blocked by anxiety: he rewrites every message multiple times, asks multiple friends for advice, thinks about her constantly but doesn't propose a real meeting. Some synchronicities have occurred (same messages at the same time, shared musical tastes), but he always postpones action. He wants to understand how to unblock the situation, choose the right moment and act authentically to actually ask her out.`,
+    }
   },
-  en: {
-    "Example 1": {
-      params: {
-        P: 1, delta: 0.44, sgnD: -0.57, absD: 1.07, K: 0.87, xi: 0.15, CN: -0.046, B: 3.94, J: 2.5, Omega: 2*Math.PI/28, tDays: 21,
-      } as Params,
-      text: `SCENARIO: Daniel and winning over Sofia.
-
-Context: Daniel (29, architect) met Sofia (27, freelance graphic designer) three weeks ago at an exhibition. They talked at length and exchanged numbers. Since then Daniel has been blocked by anxiety: he rewrites every message multiple times, asks multiple friends for advice, thinks about her constantly but doesn't propose a real meeting. Some synchronicities have occurred (same messages at the same time, shared musical tastes), but he always postpones action. He wants to understand how to unblock the situation, choose the right moment and act authentically to actually ask her out.`,
-    },
-    "Example 2": {
-      params: {
-        P: 0, delta: 0.35, sgnD: 0.4, absD: 5.2, K: 2.8, xi: 0.6, CN: 0.12, B: 2.2, J: 1.0, Omega: 2*Math.PI/33, tDays: 46,
-      } as Params,
-      text: `I'm evaluating whether to leave my stable job for a more challenging role at another company within 60 days. I have positive feedback from my network, but tend to postpone applications and over-perfect my CV. I want to understand how to maximize timing and reduce overthinking to send 5 strategic applications and prepare 2 mock interviews.`,
-    },
-    "Example 3": {
-      params: {
-        P: 0, delta: 0.5, sgnD: 0.7, absD: 6.5, K: 3.6, xi: 0.9, CN: 0.2, B: 4.4, J: 1.8, Omega: 2*Math.PI/58, tDays: 120,
-      } as Params,
-      text: `I'm launching a SaaS startup: I have a working MVP and two potential mentors. Three pilot customers are interested. I need to decide whether to open the private beta now or wait for more features. I have recurring synchronicity signals and a trade show deadline in 30 days. I want a clear action plan to maximize network effect and decision coherence.`,
-    },
-    "Example 4": {
-      params: {
-        P: 0, delta: 0.3, sgnD: 0.2, absD: 4.0, K: 1.6, xi: 0.5, CN: 0.05, B: 1.1, J: 0.6, Omega: 2*Math.PI/23, tDays: 12,
-      } as Params,
-      text: `I want to restructure my wellness habits: sleep, training, nutrition. I've tried multiple times but fall back into routine. I have a group of friends ready to support me and a personal trainer available. I want to define weekly micro-actions, manage bifurcation moments (dinners, trips) and leverage synchronicities to stay on track for 8 weeks.`,
-    },
+  "2": {
+    params: {
+      P: 0, delta: 0.35, sgnD: 0.4, absD: 5.2, K: 2.8, xi: 0.6, CN: 0.12, B: 2.2, J: 1.0, Omega: 2*Math.PI/33, tDays: 46,
+    } as Params,
+    text: {
+      it: `Valuto se lasciare il mio impiego stabile per un ruolo più sfidante in un'altra azienda entro 60 giorni. Ho feedback positivi dal network, ma tendenza a rimandare le candidature e a perfezionare troppo il CV. Vorrei capire come massimizzare il timing e ridurre l'overthinking per inviare 5 candidature strategiche e preparare 2 colloqui simulati.`,
+      en: `I'm evaluating whether to leave my stable job for a more challenging role at another company within 60 days. I have positive feedback from my network, but tend to postpone applications and over-perfect my CV. I want to understand how to maximize timing and reduce overthinking to send 5 strategic applications and prepare 2 mock interviews.`,
+    }
+  },
+  "3": {
+    params: {
+      P: 0, delta: 0.5, sgnD: 0.7, absD: 6.5, K: 3.6, xi: 0.9, CN: 0.2, B: 4.4, J: 1.8, Omega: 2*Math.PI/58, tDays: 120,
+    } as Params,
+    text: {
+      it: `Sto lanciando una startup SaaS: ho un MVP funzionante e due potenziali mentor. Tre clienti pilota sono interessati. Devo decidere se aprire adesso la beta privata o attendere altre feature. Ho segnali di sincronicità ricorrenti e una scadenza fiera tra 30 giorni. Voglio un piano d'azione chiaro per massimizzare l'effetto rete e la coerenza delle decisioni.`,
+      en: `I'm launching a SaaS startup: I have a working MVP and two potential mentors. Three pilot customers are interested. I need to decide whether to open the private beta now or wait for more features. I have recurring synchronicity signals and a trade show deadline in 30 days. I want a clear action plan to maximize network effect and decision coherence.`,
+    }
+  },
+  "4": {
+    params: {
+      P: 0, delta: 0.3, sgnD: 0.2, absD: 4.0, K: 1.6, xi: 0.5, CN: 0.05, B: 1.1, J: 0.6, Omega: 2*Math.PI/23, tDays: 12,
+    } as Params,
+    text: {
+      it: `Voglio ristrutturare le mie abitudini di benessere: sonno, allenamento, alimentazione. Ho tentato più volte ma ricado nella routine. Ho un gruppo di amici pronti a supportarmi e un personal trainer disponibile. Vorrei definire micro-azioni settimanali, gestire i momenti di biforcazione (cene, viaggi) e sfruttare le sincronicità per restare in rotta per 8 settimane.`,
+      en: `I want to restructure my wellness habits: sleep, training, nutrition. I've tried multiple times but fall back into routine. I have a group of friends ready to support me and a personal trainer available. I want to define weekly micro-actions, manage bifurcation moments (dinners, trips) and leverage synchronicities to stay on track for 8 weeks.`,
+    }
   },
 };
 
@@ -372,11 +352,11 @@ export default function Page(){
     setParams(prev => ({ ...prev, ...est } as Params));
   }
 
-  function applyPreset(name:string){
-    const preset = PRESETS[language][name as keyof typeof PRESETS['it']];
+  function applyPreset(presetNumber: string) {
+    const preset = PRESETS[presetNumber];
     if (!preset) return;
     setParams(preset.params);
-    setPrompt(preset.text);
+    setPrompt(preset.text[language]);
   }
 
   function downloadJSON(){
@@ -416,10 +396,10 @@ export default function Page(){
             <Textarea value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder={t('promptPlaceholder')} className="min-h-[120px]"/>
             <div className="flex flex-wrap gap-3">
               <Button onClick={handleAnalyze}>{t('analyzeButton')}</Button>
-              <Button variant="outline" onClick={()=>applyPreset(language === 'it' ? "Esempio 1" : "Example 1")}>{t('example1')}</Button>
-              <Button variant="outline" onClick={()=>applyPreset(language === 'it' ? "Esempio 2" : "Example 2")}>{t('example2')}</Button>
-              <Button variant="outline" onClick={()=>applyPreset(language === 'it' ? "Esempio 3" : "Example 3")}>{t('example3')}</Button>
-              <Button variant="outline" onClick={()=>applyPreset(language === 'it' ? "Esempio 4" : "Example 4")}>{t('example4')}</Button>
+              <Button variant="outline" onClick={()=>applyPreset("1")}>{t('example1')}</Button>
+              <Button variant="outline" onClick={()=>applyPreset("2")}>{t('example2')}</Button>
+              <Button variant="outline" onClick={()=>applyPreset("3")}>{t('example3')}</Button>
+              <Button variant="outline" onClick={()=>applyPreset("4")}>{t('example4')}</Button>
             </div>
           </CardContent>
         </Card>

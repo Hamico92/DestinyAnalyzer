@@ -1,4 +1,6 @@
 import "./globals.css";
+import { LanguageProvider } from "@/lib/i18n/LanguageContext";
+
 export const metadata = {
   title: "Destiny Ψ Analyzer",
   description: "Speculative decision reflection tool",
@@ -6,8 +8,12 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it">
-      <body className="min-h-screen">{children}</body>
+    <html lang="en">
+      <body className="min-h-screen">
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
+      </body>
     </html>
   );
 }

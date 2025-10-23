@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { Download, Wand2, LineChart, Sigma, Info, Rocket, FlaskConical, BookOpen } from "lucide-react";
+import { Download, Globe } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Tooltip as ReTooltip } from "recharts";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { adviceTranslations } from "@/lib/i18n/advice-translations";
 
 type Params = {
   P: 0 | 1;
@@ -34,31 +35,54 @@ function phase(z:{re:number, im:number}){ return Math.atan2(z.im, z.re); }
 
 function parsePromptToParams(prompt: string): Partial<Params> {
   const text = (prompt || "").toLowerCase();
-  const pKeywords = ["non riesco", "ansia", "penso troppo", "overthinking", "blocco", "paralisi", "riscrivo", "continuo a pensare", "non decido", "paura", "procrastino", "cerco consigli", "ho riscritto"];
-  const P: 0 | 1 = pKeywords.some(k => text.includes(k)) ? 1 : 0;
-  const negCues = ["sabot", "evito", "rinvio", "lamento", "litigo", "rompo", "odio", "scappo", "rinuncio"];
-  const posCues = ["costruire", "migliorare", "chiedo", "propongo", "avvio", "studio", "investo", "collaboro", "aiuto", "lancio", "presento", "applico", "partecipo"];
+  
+  // Keywords for Italian and English
+  const pKeywordsIt = ["non riesco", "ansia", "penso troppo", "overthinking", "blocco", "paralisi", "riscrivo", "continuo a pensare", "non decido", "paura", "procrastino", "cerco consigli", "ho riscritto"];
+  const pKeywordsEn = ["can't", "anxiety", "overthink", "stuck", "paralysis", "rewrite", "keep thinking", "can't decide", "fear", "procrastinate", "seeking advice", "rewrote"];
+  const P: 0 | 1 = [...pKeywordsIt, ...pKeywordsEn].some(k => text.includes(k)) ? 1 : 0;
+  
+  const negCuesIt = ["sabot", "evito", "rinvio", "lamento", "litigo", "rompo", "odio", "scappo", "rinuncio"];
+  const negCuesEn = ["sabotage", "avoid", "postpone", "complain", "fight", "break", "hate", "escape", "give up"];
+  const posCuesIt = ["costruire", "migliorare", "chiedo", "propongo", "avvio", "studio", "investo", "collaboro", "aiuto", "lancio", "presento", "applico", "partecipo"];
+  const posCuesEn = ["build", "improve", "ask", "propose", "start", "study", "invest", "collaborate", "help", "launch", "present", "apply", "participate"];
+  
   let polarity = 0;
-  if (negCues.some(k => text.includes(k))) polarity -= 1;
-  if (posCues.some(k => text.includes(k))) polarity += 1;
+  if ([...negCuesIt, ...negCuesEn].some(k => text.includes(k))) polarity -= 1;
+  if ([...posCuesIt, ...posCuesEn].some(k => text.includes(k))) polarity += 1;
   const sgnD = clamp(polarity, -1, 1);
-  const intensityHints = (text.match(/(subito|oggi|adesso|ogni giorno|tutti i giorni|100|molto|forte|spesso|urgente|domani|settimana)/g) || []).length;
-  const absD = clamp(2 + intensityHints * 0.6, 0, 10);
-  const hasOther = /(lei|lui|socia|socio|cliente|partner|capo|team|fornitore|investitore|amico|amica)/.test(text);
-  const delta = hasOther ? 0.5 : 0.2;
-  const kept = (text.match(/promessa mantenuta|completat[oa]|finito|conclus[oa]/g) || []).length;
-  const broken = (text.match(/promessa rott[ae]|rinvio|saltato|mancat[oa]/g) || []).length;
-  const history = kept * 0.2 - broken * 0.3;
+  
+  const intensityHintsIt = (text.match(/(subito|oggi|adesso|ogni giorno|tutti i giorni|100|molto|forte|spesso|urgente|domani|settimana)/g) || []).length;
+  const intensityHintsEn = (text.match(/(immediately|today|now|every day|daily|100|very|strong|often|urgent|tomorrow|week)/g) || []).length;
+  const absD = clamp(2 + (intensityHintsIt + intensityHintsEn) * 0.6, 0, 10);
+  
+  const hasOtherIt = /(lei|lui|socia|socio|cliente|partner|capo|team|fornitore|investitore|amico|amica)/.test(text);
+  const hasOtherEn = /(she|he|partner|client|boss|team|supplier|investor|friend)/.test(text);
+  const delta = (hasOtherIt || hasOtherEn) ? 0.5 : 0.2;
+  
+  const keptIt = (text.match(/promessa mantenuta|completat[oa]|finito|conclus[oa]/g) || []).length;
+  const keptEn = (text.match(/promise kept|completed|finished|concluded/g) || []).length;
+  const brokenIt = (text.match(/promessa rott[ae]|rinvio|saltato|mancat[oa]/g) || []).length;
+  const brokenEn = (text.match(/promise broken|postponed|skipped|missed/g) || []).length;
+  const history = (keptIt + keptEn) * 0.2 - (brokenIt + brokenEn) * 0.3;
   const K = clamp(1 + 0.1 * sgnD * absD * absD + 0.01 * history, 0.1, 12);
-  const xiHits = (text.match(/cas[ou]l|sincr|coincidenza|fortuna|tempismo|a caso|allineament[oi]|segn[o|ali]/g) || []).length;
-  const xi = clamp(0.2 + xiHits * 0.3, 0, 5);
-  const groupHits = (text.match(/team|gruppo|famiglia|amici|community|forum|reddit|telegram|facebook|social|clienti/g) || []).length;
-  const CN = clamp( (groupHits ? 0.03 * groupHits : 0) * (text.includes("support") || text.includes("aiut") ? 1 : (text.includes("critica") || text.includes("scoragg") ? -1 : 1)), -1, 1);
+  
+  const xiHitsIt = (text.match(/cas[ou]l|sincr|coincidenza|fortuna|tempismo|a caso|allineament[oi]|segn[o|ali]/g) || []).length;
+  const xiHitsEn = (text.match(/random|sync|coincidence|luck|timing|by chance|alignment|sign/g) || []).length;
+  const xi = clamp(0.2 + (xiHitsIt + xiHitsEn) * 0.3, 0, 5);
+  
+  const groupHitsIt = (text.match(/team|gruppo|famiglia|amici|community|forum|reddit|telegram|facebook|social|clienti/g) || []).length;
+  const groupHitsEn = (text.match(/team|group|family|friends|community|forum|reddit|telegram|facebook|social|clients/g) || []).length;
+  const CN = clamp( ((groupHitsIt + groupHitsEn) ? 0.03 * (groupHitsIt + groupHitsEn) : 0) * ((text.includes("support") || text.includes("aiut")) ? 1 : ((text.includes("critica") || text.includes("critic") || text.includes("scoragg")) ? -1 : 1)), -1, 1);
+  
   let B = 1.0;
-  if (/bivio|critico|decisiv[ao]|urgenza|scelta|molte opzioni|non so|incertezza/.test(text)) B += 2.0;
-  if (/entro|scadenza|24 ore|settimana|mese|domani|oggi/.test(text)) B += 1.0;
+  if (/bivio|critico|decisiv[ao]|urgenza|scelta|molte opzioni|non so|incertezza|critical|decisive|urgency|choice|many options|don't know|uncertainty/.test(text)) B += 2.0;
+  if (/entro|scadenza|24 ore|settimana|mese|domani|oggi|within|deadline|24 hours|week|month|tomorrow|today/.test(text)) B += 1.0;
   B = clamp(B, 0, 8);
-  const J = clamp( (text.match(/11:11|sogno|stesso momento|stessa canzone|segno|presagio|deja vu|déjà vu/g) || []).length * 0.7, 0, 10);
+  
+  const JIt = (text.match(/11:11|sogno|stesso momento|stessa canzone|segno|presagio|deja vu|déjà vu/g) || []).length;
+  const JEn = (text.match(/11:11|dream|same moment|same song|sign|omen|deja vu|déjà vu/g) || []).length;
+  const J = clamp((JIt + JEn) * 0.7, 0, 10);
+  
   const Omega = 2 * Math.PI / 28;
   const tDays = 0;
   return { P, sgnD, absD, delta, K, xi, CN, B, J, Omega, tDays };
@@ -77,238 +101,265 @@ function computePsi(params: Params){
 
 function fmt(n:number, d=3){ return Number.isFinite(n) ? n.toFixed(d) : "–"; }
 
-// SISTEMA SUGGERIMENTI UNIVERSALE BASATO SOLO SUI PARAMETRI NUMERICI
-function generateAdvice(params: Params) {
+function generateAdvice(params: Params, language: 'it' | 'en') {
   const tips: { pros: string[]; cons: string[]; actions: string[] } = { 
     pros: [], 
     cons: [], 
     actions: [] 
   };
   
+  const t = adviceTranslations[language];
   const psi = computePsi(params);
   const psiMag = mag(psi);
   const psiProbDensity = psiMag * psiMag;
   const psiPhase = phase(psi);
   
-  // ========== ANALISI DENSITÀ |Ψ|² (Probabilità Manifestazione) ==========
+  // Density analysis
   if (psiProbDensity < 0.15) {
-    tips.cons.push("📉 Densità |Ψ|² < 15%: probabilità manifestazione molto bassa");
-    tips.actions.push("🔍 Rivaluta obiettivo: con <15% probabilità, vale davvero la pena investire energia?");
-    tips.actions.push("🔄 Considera pivot completo: cambia target o approccio radicalmente");
+    tips.cons.push(t.densityVeryLow);
+    tips.actions.push(t.reevaluateGoal);
+    tips.actions.push(t.considerPivot);
   } else if (psiProbDensity >= 0.15 && psiProbDensity < 0.30) {
-    tips.cons.push("⚠️ Densità |Ψ|² = " + fmt(psiProbDensity, 2) + " (15-30%): probabilità bassa");
-    tips.actions.push("📊 Analizza costo-beneficio: energia investita vs probabilità successo");
-    tips.actions.push("⚡ Per superare 30%: aumenta |D| (intensità) o δ (reciprocità)");
+    tips.cons.push(t.densityLow.replace('{value}', fmt(psiProbDensity, 2)));
+    tips.actions.push(t.analyzeCostBenefit);
+    tips.actions.push(t.increaseIntensity);
   } else if (psiProbDensity >= 0.30 && psiProbDensity < 0.50) {
-    tips.pros.push("📈 Densità |Ψ|² = " + fmt(psiProbDensity, 2) + " (30-50%): probabilità moderata");
-    tips.actions.push("🎯 Zona grigia: serve 1 azione decisiva per spostare sopra 50%");
+    tips.pros.push(t.densityModerate.replace('{value}', fmt(psiProbDensity, 2)));
+    tips.actions.push(t.grayZone);
   } else if (psiProbDensity >= 0.50 && psiProbDensity < 1.0) {
-    tips.pros.push("✅ Densità |Ψ|² = " + fmt(psiProbDensity, 2) + " (50-100%): buona probabilità");
-    tips.actions.push("🚀 Mantieni momentum: continua azioni coerenti");
+    tips.pros.push(t.densityGood.replace('{value}', fmt(psiProbDensity, 2)));
+    tips.actions.push(t.maintainMomentum);
   } else if (psiProbDensity >= 1.0 && psiProbDensity < 4.0) {
-    tips.pros.push("🔥 Densità |Ψ|² = " + fmt(psiProbDensity, 2) + ": alta coerenza campo");
-    tips.actions.push("⚡ Agisci ORA: momento favorevole, non rimandare");
+    tips.pros.push(t.densityHigh.replace('{value}', fmt(psiProbDensity, 2)));
+    tips.actions.push(t.actNowFavorable);
   } else if (psiProbDensity >= 4.0) {
-    tips.cons.push("⚡ Densità |Ψ|² > 4: possibile sovrasaturazione");
-    tips.actions.push("🧘 Rallenta: troppa intensità può generare resistenza/burnout");
+    tips.cons.push(t.densityOversaturated);
+    tips.actions.push(t.slowDownBurnout);
   }
   
-  // ========== ANALISI OVERTHINKING (P) ==========
+  // Overthinking analysis
   if (params.P === 0) {
-    tips.pros.push("✅ P=0: energia non invertita, nessun overthinking rilevato");
+    tips.pros.push(t.noOverthinking);
   } else {
-    tips.cons.push("🧠 P=1: overthinking attivo, inversione energetica (-1)^P = -1");
-    tips.actions.push("⏰ Finestra decisionale: 25 min pensiero MAX, poi azione obbligatoria");
-    tips.actions.push("🚫 Stop ricerca consiglio: decide CHI agisce, non chi pensa");
+    tips.cons.push(t.overthinkingActive);
+    tips.actions.push(t.decisionWindow);
+    tips.actions.push(t.stopAdviceSeeking);
   }
   
-  // ========== ANALISI RECIPROCITÀ/CONNESSIONE (δ) ==========
+  // Reciprocity analysis
   if (params.delta < 0.2) {
-    tips.cons.push("⚠️ δ=" + fmt(params.delta, 2) + " < 0.2: connessione/reciprocità quasi nulla");
-    tips.actions.push("🤝 Test reciprocità: proponi 1 interazione e osserva risposta entro 48h");
-    tips.actions.push("❌ Se nessuna risposta → accetta realtà e redirect energia altrove");
+    tips.cons.push(t.reciprocityAlmostNull.replace('{value}', fmt(params.delta, 2)));
+    tips.actions.push(t.testReciprocity);
+    tips.actions.push(t.acceptReality);
   } else if (params.delta >= 0.2 && params.delta < 0.4) {
-    tips.cons.push("📉 δ=" + fmt(params.delta, 2) + " (0.2-0.4): reciprocità bassa");
-    tips.actions.push("📈 Aumenta δ: proponi 1 scambio paritario concreto (non unilaterale)");
+    tips.cons.push(t.reciprocityLow.replace('{value}', fmt(params.delta, 2)));
+    tips.actions.push(t.increaseDeltaAction);
   } else if (params.delta >= 0.4 && params.delta <= 0.7) {
-    tips.pros.push("🔗 δ=" + fmt(params.delta, 2) + " (0.4-0.7): reciprocità equilibrata");
+    tips.pros.push(t.reciprocityBalanced.replace('{value}', fmt(params.delta, 2)));
   } else if (params.delta > 0.7) {
-    tips.pros.push("⚡ δ=" + fmt(params.delta, 2) + " > 0.7: alta sincronia/connessione");
+    tips.pros.push(t.reciprocityHigh.replace('{value}', fmt(params.delta, 2)));
     if (psiProbDensity < 0.5) {
-      tips.cons.push("⚠️ PARADOSSO: δ alto ma |Ψ|² basso → altri fattori bloccano");
-      tips.actions.push("🔍 Analizza: se δ è alto ma risultato basso, controlla sgn(D), K, B");
+      tips.cons.push(t.paradoxHighDelta);
+      tips.actions.push(t.analyzeBlocking);
     }
   }
   
-  // ========== ANALISI DIREZIONE (sgn(D)) ==========
+  // Direction analysis
   if (params.sgnD > 0.3) {
-    tips.pros.push("➕ sgn(D)=" + fmt(params.sgnD, 2) + " positivo: direzione costruttiva");
+    tips.pros.push(t.directionPositive.replace('{value}', fmt(params.sgnD, 2)));
   } else if (params.sgnD >= -0.3 && params.sgnD <= 0.3) {
-    tips.cons.push("⚖️ sgn(D)=" + fmt(params.sgnD, 2) + " neutro: azioni senza direzione chiara");
-    tips.actions.push("🎯 Definisci direzione: 1 azione esplicitamente costruttiva entro 24h");
+    tips.cons.push(t.directionNeutral.replace('{value}', fmt(params.sgnD, 2)));
+    tips.actions.push(t.defineDirection);
   } else {
-    tips.cons.push("➖ sgn(D)=" + fmt(params.sgnD, 2) + " negativo: pattern auto-sabotaggio");
-    tips.actions.push("🛑 STOP 1 comportamento distruttivo: identifica e blocca");
-    tips.actions.push("🔄 Sostituisci: per ogni azione negativa, 1 micro-azione +");
+    tips.cons.push(t.directionNegative.replace('{value}', fmt(params.sgnD, 2)));
+    tips.actions.push(t.stopDestructive);
+    tips.actions.push(t.substituteNegative);
   }
   
-  // ========== ANALISI INTENSITÀ (|D|) ==========
+  // Intensity analysis
   if (params.absD < 2) {
-    tips.cons.push("📊 |D|=" + fmt(params.absD, 1) + " < 2: intensità troppo bassa");
-    tips.actions.push("⚡ Aumenta |D|: esegui 1 azione livello ≥4 entro 24h");
+    tips.cons.push(t.intensityTooLow.replace('{value}', fmt(params.absD, 1)));
+    tips.actions.push(t.increaseIntensityAction);
   } else if (params.absD >= 2 && params.absD <= 5) {
-    tips.pros.push("📈 |D|=" + fmt(params.absD, 1) + " (2-5): intensità sufficiente");
+    tips.pros.push(t.intensitySufficient.replace('{value}', fmt(params.absD, 1)));
   } else if (params.absD > 5 && params.absD <= 8) {
-    tips.pros.push("🔥 |D|=" + fmt(params.absD, 1) + " alta: impegno significativo");
+    tips.pros.push(t.intensityHigh.replace('{value}', fmt(params.absD, 1)));
   } else {
-    tips.cons.push("⚠️ |D|=" + fmt(params.absD, 1) + " > 8: possibile iperattività/burnout");
-    tips.actions.push("🧘 Modera intensità: qualità > quantità nelle prossime 48h");
+    tips.cons.push(t.intensityExcessive.replace('{value}', fmt(params.absD, 1)));
+    tips.actions.push(t.moderateIntensity);
   }
   
-  // ========== ANALISI AMPLIFICAZIONE KARMICA (K) ==========
+  // Karma analysis
   if (params.K < 0.8) {
-    tips.cons.push("⚖️ K=" + fmt(params.K, 2) + " < 0.8: karma negativo, promesse rotte pesano");
-    tips.actions.push("✅ Ripristina K: completa 1 impegno aperto o ripara 1 promessa");
+    tips.cons.push(t.karmaNegative.replace('{value}', fmt(params.K, 2)));
+    tips.actions.push(t.restoreKarma);
   } else if (params.K >= 0.8 && params.K <= 1.5) {
-    tips.pros.push("⚖️ K=" + fmt(params.K, 2) + " neutro: storia azioni equilibrata");
+    tips.pros.push(t.karmaNeutral.replace('{value}', fmt(params.K, 2)));
   } else {
-    tips.pros.push("🔁 K=" + fmt(params.K, 2) + " > 1.5: amplificazione positiva, azioni passate aiutano");
+    tips.pros.push(t.karmaPositive.replace('{value}', fmt(params.K, 2)));
   }
   
-  // ========== ANALISI RETE (C(N)) ==========
+  // Network analysis
   if (params.CN < -0.3) {
-    tips.cons.push("👥 C(N)=" + fmt(params.CN, 2) + " < -0.3: influenza network negativa");
-    tips.actions.push("🔄 Detox rete: -50% esposizione fonti tossiche per 7 giorni");
-    tips.actions.push("➕ Aggiungi 1 mentor/contatto positivo entro 10 giorni");
+    tips.cons.push(t.networkNegative.replace('{value}', fmt(params.CN, 2)));
+    tips.actions.push(t.networkDetox);
+    tips.actions.push(t.addMentor);
   } else if (params.CN >= -0.3 && params.CN <= 0.3) {
-    tips.pros.push("👥 C(N)=" + fmt(params.CN, 2) + " neutro: network non influisce significativamente");
+    tips.pros.push(t.networkNeutral.replace('{value}', fmt(params.CN, 2)));
   } else {
-    tips.pros.push("👥 C(N)=" + fmt(params.CN, 2) + " > 0.3: supporto network positivo");
+    tips.pros.push(t.networkPositive.replace('{value}', fmt(params.CN, 2)));
   }
   
-  // ========== ANALISI BIFORCAZIONE (B) ==========
+  // Bifurcation analysis
   if (params.B >= 3) {
-    tips.pros.push("🔀 B=" + fmt(params.B, 1) + " ≥ 3: momento critico/biforcazione");
-    tips.actions.push("⏱️ Decisione entro 48-72h: finestra opportunità o rischio imminente");
-    tips.actions.push("🎯 Regola 'slow is smooth': pensa chiaro, poi agisci deciso");
+    tips.pros.push(t.bifurcationCritical.replace('{value}', fmt(params.B, 1)));
+    tips.actions.push(t.decisionTimeframe);
+    tips.actions.push(t.slowIsSmooth);
   } else if (params.B >= 1.5 && params.B < 3) {
-    tips.pros.push("⚖️ B=" + fmt(params.B, 1) + " (1.5-3): complessità moderata");
+    tips.pros.push(t.bifurcationModerate.replace('{value}', fmt(params.B, 1)));
   }
   
-  // ========== ANALISI SINCRONICITÀ (J) ==========
+  // Synchronicity analysis
   if (params.J >= 2) {
-    tips.pros.push("✨ J=" + fmt(params.J, 1) + " ≥ 2: pattern sincronicità rilevanti");
-    tips.actions.push("🎯 Sfrutta momentum: agisci mentre 'vento è favorevole'");
+    tips.pros.push(t.synchronicityRelevant.replace('{value}', fmt(params.J, 1)));
+    tips.actions.push(t.leverageMomentum);
   } else if (params.J < 0.5) {
-    tips.cons.push("📉 J=" + fmt(params.J, 1) + " < 0.5: zero segnali sincronici");
+    tips.cons.push(t.synchronicityLow.replace('{value}', fmt(params.J, 1)));
   }
   
-  // ========== ANALISI FASE Arg(Ψ) ==========
+  // Phase analysis
   const phaseNorm = ((psiPhase % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
   if (phaseNorm >= 0 && phaseNorm < Math.PI / 4) {
-    tips.pros.push("🎯 Fase ≈ 0: allineamento ciclico, momento azione");
+    tips.pros.push(t.phaseAligned);
   } else if (phaseNorm >= Math.PI * 0.75 && phaseNorm <= Math.PI * 1.25) {
-    tips.cons.push("🔄 Fase ≈ π: inversione ciclica, possibile auto-sabotaggio");
-    tips.actions.push("⏳ Aspetta 3-7 giorni prima di decisioni critiche");
+    tips.cons.push(t.phaseInversion);
+    tips.actions.push(t.waitBeforeDecisions);
   } else if (phaseNorm > Math.PI * 1.25) {
-    tips.cons.push("↩️ Fase > π: retrograda, ripetizione pattern passati");
-    tips.actions.push("🔍 Rivedi K(D) e sgn(D): stai ripetendo errori?");
+    tips.cons.push(t.phaseRetrograde);
+    tips.actions.push(t.reviewPatterns);
   }
   
-  // ========== INTERAZIONI CRITICHE ==========
-  
-  // Delta alto + Probabilità bassa = ILLUSIONE
+  // Critical interactions
   if (params.delta >= 0.5 && psiProbDensity < 0.30) {
-    tips.cons.push("💔 PARADOSSO: δ=" + fmt(params.delta, 2) + " alto ma |Ψ|²=" + fmt(psiProbDensity, 2) + " basso");
-    tips.actions.push("🔍 Connessione c'è ma bloccata: analizza sgn(D), B(t), K(D)");
-    tips.actions.push("❌ Se altri fattori immutabili → accetta che δ alto NON basta");
+    tips.cons.push(t.illusionParadox.replace('{delta}', fmt(params.delta, 2)).replace('{density}', fmt(psiProbDensity, 2)));
+    tips.actions.push(t.connectionBlocked);
+    tips.actions.push(t.acceptHighDelta);
   }
   
-  // Intensità alta + Direzione negativa = SPRECO ENERGIA
   if (params.absD >= 5 && params.sgnD < -0.3) {
-    tips.cons.push("⚠️ SPRECO: alta intensità (|D|=" + fmt(params.absD, 1) + ") in direzione negativa");
-    tips.actions.push("🛑 STOP immediato: stai danneggiando attivamente con impegno alto");
+    tips.cons.push(t.energyWaste.replace('{intensity}', fmt(params.absD, 1)));
+    tips.actions.push(t.stopImmediately);
   }
   
-  // Overthinking + Biforcazione = PARALISI CRITICA
   if (params.P === 1 && params.B >= 3) {
-    tips.cons.push("🚨 PARALISI CRITICA: overthinking in momento decisivo");
-    tips.actions.push("⏰ Timer 1 ora: decidi ADESSO, deadline non negoziabile");
+    tips.cons.push(t.criticalParalysis);
+    tips.actions.push(t.oneHourTimer);
   }
   
-  // Probabilità bassissima (<20%) + Intensità alta
   if (psiProbDensity < 0.20 && params.absD >= 4) {
-    tips.cons.push("💸 INEFFICIENZA: alta energia su probabilità <20%");
-    tips.actions.push("🔄 Redirect urgente: stesso sforzo su target con >40% probabilità");
+    tips.cons.push(t.inefficiency);
+    tips.actions.push(t.redirectUrgent);
   }
   
-  // Assicura almeno 1 azione
   if (tips.actions.length === 0) {
-    tips.actions.push("📋 Prossima azione più piccola possibile: esegui OGGI entro 24h");
+    tips.actions.push(t.nextSmallAction);
   }
   
   return tips;
 }
 
-const PRESETS: Record<string, Params> = {
-  "Esempio 1 — Daniele & Sofia": {
-    P: 1, delta: 0.44, sgnD: -0.57, absD: 1.07, K: 0.87, xi: 0.15, CN: -0.046, B: 3.94, J: 2.5, Omega: 2*Math.PI/28, tDays: 21,
+const PRESETS = {
+  it: {
+    "Esempio 1": {
+      params: {
+        P: 1, delta: 0.44, sgnD: -0.57, absD: 1.07, K: 0.87, xi: 0.15, CN: -0.046, B: 3.94, J: 2.5, Omega: 2*Math.PI/28, tDays: 21,
+      } as Params,
+      text: `SCENARIO: Daniele e la conquista di Sofia.
+
+Contesto: Daniele (29, architetto) ha incontrato Sofia (27, grafica freelance) tre settimane fa a una mostra. Hanno parlato a lungo e si sono scambiati i numeri. Da allora Daniele è bloccato dall'ansia: riscrive ogni messaggio molte volte, chiede consigli a più amici, pensa continuamente a lei ma non propone un incontro reale. Alcune sincronicità ci sono state (stessi messaggi allo stesso momento, gusti musicali in comune), ma lui rimanda sempre l'azione. Vorrebbe capire come sbloccare la situazione, scegliere il momento giusto e agire con autenticità per invitarla a uscire concretamente.`,
+    },
+    "Esempio 2": {
+      params: {
+        P: 0, delta: 0.35, sgnD: 0.4, absD: 5.2, K: 2.8, xi: 0.6, CN: 0.12, B: 2.2, J: 1.0, Omega: 2*Math.PI/33, tDays: 46,
+      } as Params,
+      text: `Valuto se lasciare il mio impiego stabile per un ruolo più sfidante in un'altra azienda entro 60 giorni. Ho feedback positivi dal network, ma tendenza a rimandare le candidature e a perfezionare troppo il CV. Vorrei capire come massimizzare il timing e ridurre l'overthinking per inviare 5 candidature strategiche e preparare 2 colloqui simulati.`,
+    },
+    "Esempio 3": {
+      params: {
+        P: 0, delta: 0.5, sgnD: 0.7, absD: 6.5, K: 3.6, xi: 0.9, CN: 0.2, B: 4.4, J: 1.8, Omega: 2*Math.PI/58, tDays: 120,
+      } as Params,
+      text: `Sto lanciando una startup SaaS: ho un MVP funzionante e due potenziali mentor. Tre clienti pilota sono interessati. Devo decidere se aprire adesso la beta privata o attendere altre feature. Ho segnali di sincronicità ricorrenti e una scadenza fiera tra 30 giorni. Voglio un piano d'azione chiaro per massimizzare l'effetto rete e la coerenza delle decisioni.`,
+    },
+    "Esempio 4": {
+      params: {
+        P: 0, delta: 0.3, sgnD: 0.2, absD: 4.0, K: 1.6, xi: 0.5, CN: 0.05, B: 1.1, J: 0.6, Omega: 2*Math.PI/23, tDays: 12,
+      } as Params,
+      text: `Voglio ristrutturare le mie abitudini di benessere: sonno, allenamento, alimentazione. Ho tentato più volte ma ricado nella routine. Ho un gruppo di amici pronti a supportarmi e un personal trainer disponibile. Vorrei definire micro-azioni settimanali, gestire i momenti di biforcazione (cene, viaggi) e sfruttare le sincronicità per restare in rotta per 8 settimane.`,
+    },
   },
-  "Esempio 2 — Carriera (placeholder)": {
-    P: 0, delta: 0.35, sgnD: 0.4, absD: 5.2, K: 2.8, xi: 0.6, CN: 0.12, B: 2.2, J: 1.0, Omega: 2*Math.PI/33, tDays: 46,
+  en: {
+    "Example 1": {
+      params: {
+        P: 1, delta: 0.44, sgnD: -0.57, absD: 1.07, K: 0.87, xi: 0.15, CN: -0.046, B: 3.94, J: 2.5, Omega: 2*Math.PI/28, tDays: 21,
+      } as Params,
+      text: `SCENARIO: Daniel and winning over Sofia.
+
+Context: Daniel (29, architect) met Sofia (27, freelance graphic designer) three weeks ago at an exhibition. They talked at length and exchanged numbers. Since then Daniel has been blocked by anxiety: he rewrites every message multiple times, asks multiple friends for advice, thinks about her constantly but doesn't propose a real meeting. Some synchronicities have occurred (same messages at the same time, shared musical tastes), but he always postpones action. He wants to understand how to unblock the situation, choose the right moment and act authentically to actually ask her out.`,
+    },
+    "Example 2": {
+      params: {
+        P: 0, delta: 0.35, sgnD: 0.4, absD: 5.2, K: 2.8, xi: 0.6, CN: 0.12, B: 2.2, J: 1.0, Omega: 2*Math.PI/33, tDays: 46,
+      } as Params,
+      text: `I'm evaluating whether to leave my stable job for a more challenging role at another company within 60 days. I have positive feedback from my network, but tend to postpone applications and over-perfect my CV. I want to understand how to maximize timing and reduce overthinking to send 5 strategic applications and prepare 2 mock interviews.`,
+    },
+    "Example 3": {
+      params: {
+        P: 0, delta: 0.5, sgnD: 0.7, absD: 6.5, K: 3.6, xi: 0.9, CN: 0.2, B: 4.4, J: 1.8, Omega: 2*Math.PI/58, tDays: 120,
+      } as Params,
+      text: `I'm launching a SaaS startup: I have a working MVP and two potential mentors. Three pilot customers are interested. I need to decide whether to open the private beta now or wait for more features. I have recurring synchronicity signals and a trade show deadline in 30 days. I want a clear action plan to maximize network effect and decision coherence.`,
+    },
+    "Example 4": {
+      params: {
+        P: 0, delta: 0.3, sgnD: 0.2, absD: 4.0, K: 1.6, xi: 0.5, CN: 0.05, B: 1.1, J: 0.6, Omega: 2*Math.PI/23, tDays: 12,
+      } as Params,
+      text: `I want to restructure my wellness habits: sleep, training, nutrition. I've tried multiple times but fall back into routine. I have a group of friends ready to support me and a personal trainer available. I want to define weekly micro-actions, manage bifurcation moments (dinners, trips) and leverage synchronicities to stay on track for 8 weeks.`,
+    },
   },
-  "Esempio 3 — Startup (placeholder)": {
-    P: 0, delta: 0.5, sgnD: 0.7, absD: 6.5, K: 3.6, xi: 0.9, CN: 0.2, B: 4.4, J: 1.8, Omega: 2*Math.PI/58, tDays: 120,
-  },
-  "Esempio 4 — Benessere (placeholder)": {
-    P: 0, delta: 0.3, sgnD: 0.2, absD: 4.0, K: 1.6, xi: 0.5, CN: 0.05, B: 1.1, J: 0.6, Omega: 2*Math.PI/23, tDays: 12,
-  },
-};
-
-const PRESET_TEXT: Record<string, string> = {
-  "Esempio 1 — Daniele & Sofia": `SCENARIO: Daniele e la conquista di Sofia.
-
-Contesto: Daniele (29, architetto) ha incontrato Sofia (27, grafica freelance) tre settimane fa a una mostra. Hanno parlato a lungo e si sono scambiati i numeri. Da allora Daniele è bloccato dall'ansia: riscrive ogni messaggio molte volte, chiede consigli a più amici, pensa continuamente a lei ma non propone un incontro reale. Alcune sincronicità ci sono state (stessi messaggi allo stesso momento, gusti musicali in common), ma lui rimanda sempre l'azione. Vorrebbe capire come sbloccare la situazione, scegliere il momento giusto e agire con autenticità per invitarla a uscire concretamente.`,
-
-  "Esempio 2 — Carriera (placeholder)": `Valuto se lasciare il mio impiego stabile per un ruolo più sfidante in un'altra azienda entro 60 giorni. Ho feedback positivi dal network, ma tendenza a rimandare le candidature e a perfezionare troppo il CV. Vorrei capire come massimizzare il timing e ridurre l'overthinking per inviare 5 candidature strategiche e preparare 2 colloqui simulati.`,
-
-  "Esempio 3 — Startup (placeholder)": `Sto lanciando una startup SaaS: ho un MVP funzionante e due potenziali mentor. Tre clienti pilota sono interessati. Devo decidere se aprire adesso la beta privata o attendere altre feature. Ho segnali di sincronicità ricorrenti e una scadenza fiera tra 30 giorni. Voglio un piano d'azione chiaro per massimizzare l'effetto rete e la coerenza delle decisioni.`,
-
-  "Esempio 4 — Benessere (placeholder)": `Voglio ristrutturare le mie abitudini di benessere: sonno, allenamento, alimentazione. Ho tentato più volte ma ricado nella routine. Ho un gruppo di amici pronti a supportarmi e un personal trainer disponibile. Vorrei definire micro-azioni settimanali, gestire i momenti di biforcazione (cene, viaggi) e sfruttare le sincronicità per restare in rotta per 8 settimane.`,
 };
 
 export default function Page(){
+  const { language, setLanguage, t } = useLanguage();
   const [prompt, setPrompt] = useState("");
   const [params, setParams] = useState<Params>({ P:0, delta:0.2, sgnD:0, absD:2, K:1, xi:0.2, CN:0, B:1, J:0, Omega:2*Math.PI/28, tDays:0 });
   const [rows, setRows] = useState<BreakdownRow[]>([]);
 
   useEffect(()=>{
     const r: BreakdownRow[] = [
-      { key: "(-1)^P", value: Math.pow(-1, params.P), hint: "Inversione da overthinking (0→+1, 1→-1)" },
-      { key: "δ(i,j)", value: params.delta, hint: "Connessione/sincronicità interpersonale" },
-      { key: "sgn(D)", value: params.sgnD, hint: "Direzione etica/funzionale della decisione" },
-      { key: "|D|", value: params.absD, hint: "Intensità della decisione" },
-      { key: "K(D)", value: params.K, hint: "Amplificazione/karma delle azioni" },
-      { key: "e^{-iΩt} (Re)", value: Math.cos(params.Omega*params.tDays), hint: "Oscillatore ciclico (componente reale)" },
-      { key: "e^{-iΩt} (Im)", value: -Math.sin(params.Omega*params.tDays), hint: "Oscillatore ciclico (componente immaginaria)" },
-      { key: "ξ(t)", value: params.xi, hint: "Casualità/serendipità percepita" },
-      { key: "C(N)", value: params.CN, hint: "Influenza del network (−1↔+1)" },
-      { key: "B(t)", value: params.B, hint: "Criticità/biforcazione del momento" },
-      { key: "J(t)", value: params.J, hint: "Indice di sincronicità junghiana" },
+      { key: "(-1)^P", value: Math.pow(-1, params.P), hint: t('hintOverthinking') },
+      { key: "δ(i,j)", value: params.delta, hint: t('hintConnection') },
+      { key: "sgn(D)", value: params.sgnD, hint: t('hintDirection') },
+      { key: "|D|", value: params.absD, hint: t('hintIntensity') },
+      { key: "K(D)", value: params.K, hint: t('hintAmplification') },
+      { key: "e^{-iΩt} (Re)", value: Math.cos(params.Omega*params.tDays), hint: t('hintRealPart') },
+      { key: "e^{-iΩt} (Im)", value: -Math.sin(params.Omega*params.tDays), hint: t('hintImaginaryPart') },
+      { key: "ξ(t)", value: params.xi, hint: t('hintSerendipity') },
+      { key: "C(N)", value: params.CN, hint: t('hintNetwork') },
+      { key: "B(t)", value: params.B, hint: t('hintBifurcation') },
+      { key: "J(t)", value: params.J, hint: t('hintSynchronicity') },
     ];
     setRows(r);
-  }, [params]);
+  }, [params, t]);
 
   const psi = useMemo(()=>computePsi(params), [params]);
   const psiMag = mag(psi);
   const psiPhase = phase(psi);
   const psiProbDensity = psiMag*psiMag;
-  const tips = useMemo(()=>generateAdvice(params), [params]);
+  const tips = useMemo(()=>generateAdvice(params, language), [params, language]);
 
   const radarData = [
-    { metric: "Connessione δ", value: clamp(params.delta, 0, 1) },
-    { metric: "Intensità |D|", value: params.absD / 10 },
-    { metric: "Direzione sgn(D)", value: (params.sgnD+1)/2 },
+    { metric: t('connection'), value: clamp(params.delta, 0, 1) },
+    { metric: t('intensity'), value: params.absD / 10 },
+    { metric: t('direction'), value: (params.sgnD+1)/2 },
     { metric: "K(D)", value: clamp(params.K/6, 0, 1) },
     { metric: "ξ(t)", value: clamp(params.xi/5, 0, 1) },
     { metric: "C(N)", value: (params.CN+1)/2 },
@@ -322,11 +373,10 @@ export default function Page(){
   }
 
   function applyPreset(name:string){
-    const p = PRESETS[name];
-    if (!p) return;
-    setParams(p);
-    const txt = PRESET_TEXT[name];
-    if (txt) setPrompt(txt);
+    const preset = PRESETS[language][name as keyof typeof PRESETS['it']];
+    if (!preset) return;
+    setParams(preset.params);
+    setPrompt(preset.text);
   }
 
   function downloadJSON(){
@@ -337,75 +387,86 @@ export default function Page(){
     URL.revokeObjectURL(url);
   }
 
+  const currentYear = new Date().getFullYear();
+
   return (
     <div className="min-h-screen w-full bg-neutral-50 text-neutral-900 p-6 sm:p-10">
       <div className="max-w-6xl mx-auto grid gap-6">
         <header className="flex items-center justify-between">
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight flex items-center gap-3">Destiny Ψ Analyzer</h1>
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight flex items-center gap-3">{t('title')}</h1>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={downloadJSON}>Esporta JSON</Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setLanguage(language === 'it' ? 'en' : 'it')}
+              className="flex items-center gap-2"
+            >
+              <Globe className="w-4 h-4" />
+              {language === 'it' ? 'EN' : 'IT'}
+            </Button>
+            <Button variant="secondary" onClick={downloadJSON} className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              {t('exportJson')}
+            </Button>
           </div>
         </header>
 
         <Card className="rounded-2xl">
           <CardContent className="p-6 grid gap-4">
-            <label className="text-sm font-medium">Scrivi un prompt (situazione, obiettivo, contesto)</label>
-            <Textarea value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder={"Esempio:\n\nVoglio cambiare lavoro entro 3 mesi ma continuo a rimandare. Il mio team è diviso. Ho notato strane coincidenze positive nelle ultime due settimane..."} className="min-h-[120px]"/>
+            <label className="text-sm font-medium">{t('promptLabel')}</label>
+            <Textarea value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder={t('promptPlaceholder')} className="min-h-[120px]"/>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={handleAnalyze}>Analizza</Button>
-              <Button variant="outline" onClick={()=>applyPreset("Esempio 1 — Daniele & Sofia")}>Esempio 1</Button>
-              <Button variant="outline" onClick={()=>applyPreset("Esempio 2 — Carriera (placeholder)")}>Esempio 2</Button>
-              <Button variant="outline" onClick={()=>applyPreset("Esempio 3 — Startup (placeholder)")}>Esempio 3</Button>
-              <Button variant="outline" onClick={()=>applyPreset("Esempio 4 — Benessere (placeholder)")}>Esempio 4</Button>
+              <Button onClick={handleAnalyze}>{t('analyzeButton')}</Button>
+              <Button variant="outline" onClick={()=>applyPreset(language === 'it' ? "Esempio 1" : "Example 1")}>{t('example1')}</Button>
+              <Button variant="outline" onClick={()=>applyPreset(language === 'it' ? "Esempio 2" : "Example 2")}>{t('example2')}</Button>
+              <Button variant="outline" onClick={()=>applyPreset(language === 'it' ? "Esempio 3" : "Example 3")}>{t('example3')}</Button>
+              <Button variant="outline" onClick={()=>applyPreset(language === 'it' ? "Esempio 4" : "Example 4")}>{t('example4')}</Button>
             </div>
           </CardContent>
         </Card>
 
         <Tabs defaultValue="results" className="w-full">
-          <TabsList className="grid grid-cols-3 sm:grid-cols-5 w-full">
-            <TabsTrigger value="results">Risultati Ψ</TabsTrigger>
-            <TabsTrigger value="params">Parametri</TabsTrigger>
-            <TabsTrigger value="charts">Grafici</TabsTrigger>
-            <TabsTrigger value="suggestions">Suggerimenti</TabsTrigger>
-            <TabsTrigger value="about">Formula</TabsTrigger>
-            <TabsTrigger value="legend">Legenda Ψ</TabsTrigger>
+          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full">
+            <TabsTrigger value="results">{t('tabResults')}</TabsTrigger>
+            <TabsTrigger value="params">{t('tabParams')}</TabsTrigger>
+            <TabsTrigger value="charts">{t('tabCharts')}</TabsTrigger>
+            <TabsTrigger value="suggestions">{t('tabSuggestions')}</TabsTrigger>
+            <TabsTrigger value="about">{t('tabFormula')}</TabsTrigger>
+            <TabsTrigger value="legend">{t('tabLegend')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="results">
             <div className="grid md:grid-cols-4 gap-4">
               <Card className="rounded-2xl">
                 <CardContent className="p-6 grid gap-1">
-                  <div className="text-sm text-neutral-500">|Ψ(t)| (ampiezza)</div>
+                  <div className="text-sm text-neutral-500">{t('amplitude')}</div>
                   <div className="text-3xl font-semibold">{fmt(psiMag, 4)}</div>
-                  <div className="text-xs text-neutral-500">Densità |Ψ|² ≈ {fmt(psiProbDensity,4)}</div>
+                  <div className="text-xs text-neutral-500">{t('density')} ≈ {fmt(psiProbDensity,4)}</div>
                 </CardContent>
               </Card>
               <Card className="rounded-2xl">
                 <CardContent className="p-6 grid gap-1">
-                  <div className="text-sm text-neutral-500">Arg(Ψ) (fase)</div>
+                  <div className="text-sm text-neutral-500">{t('phase')}</div>
                   <div className="text-3xl font-semibold">{fmt(psiPhase, 4)} rad</div>
-                  <div className="text-xs text-neutral-500">Ω = {fmt(params.Omega,4)} rad/giorno · t = {fmt(params.tDays,2)} giorni</div>
+                  <div className="text-xs text-neutral-500">Ω = {fmt(params.Omega,4)} rad/{language === 'it' ? 'giorno' : 'day'} · t = {fmt(params.tDays,2)} {t('days')}</div>
                 </CardContent>
               </Card>
               <Card className="rounded-2xl">
                 <CardContent className="p-6 grid gap-1">
-                  <div className="text-sm text-neutral-500">Densità |Ψ|²</div>
+                  <div className="text-sm text-neutral-500">{t('density')}</div>
                   <div className="text-3xl font-semibold">{fmt(psiProbDensity, 4)}</div>
-                  <div className="text-xs text-neutral-500">
-                    Probabilità relativa di manifestazione
-                  </div>
+                  <div className="text-xs text-neutral-500">{t('densitySubtext')}</div>
                 </CardContent>
               </Card>
               <Card className="rounded-2xl">
                 <CardContent className="p-6 grid gap-3">
-                  <div className="text-sm text-neutral-500">Qualità attuale</div>
+                  <div className="text-sm text-neutral-500">{t('currentQuality')}</div>
                   <div className="flex flex-wrap gap-2">
-                    <Badge>{params.P===0?"Nessuna inversione (P=0)":"Inversione (P=1)"}</Badge>
-                    <Badge>{params.sgnD>0?"Direzione +":"Direzione ±/−"}</Badge>
+                    <Badge>{params.P===0 ? t('noInversion') : t('inversion')}</Badge>
+                    <Badge>{params.sgnD>0 ? t('positiveDirection') : t('neutralDirection')}</Badge>
                     <Badge>K={fmt(params.K,2)}</Badge>
                     <Badge>δ={fmt(params.delta,2)}</Badge>
                   </div>
-                  <div className="text-xs text-neutral-500">Nota: modello speculativo a scopo riflessivo.</div>
+                  <div className="text-xs text-neutral-500">{t('speculativeNote')}</div>
                 </CardContent>
               </Card>
             </div>
@@ -416,43 +477,43 @@ export default function Page(){
               <CardContent className="p-6 grid gap-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="grid gap-4">
-                    <label className="text-sm font-medium flex items-center gap-2">Overthinking P</label>
+                    <label className="text-sm font-medium flex items-center gap-2">{t('overthinking')}</label>
                     <div className="flex items-center gap-3">
                       <Button onClick={()=>setParams(p=>({...p, P:0}))}>P=0</Button>
                       <Button variant="outline" onClick={()=>setParams(p=>({...p, P:1}))}>P=1</Button>
                     </div>
 
-                    <label className="text-sm font-medium">δ(i,j) — Connessione</label>
+                    <label className="text-sm font-medium">{t('connection')}</label>
                     <Slider value={[params.delta]} onValueChange={([v])=>setParams(p=>({...p, delta: Number(v)}))} min={0} max={2} step={0.01}/>
-                    <div className="text-xs">Attuale: {fmt(params.delta,2)} (0→2)</div>
+                    <div className="text-xs">{t('current')}: {fmt(params.delta,2)} (0→2)</div>
 
-                    <label className="text-sm font-medium">sgn(D) — Direzione decisioni</label>
+                    <label className="text-sm font-medium">{t('direction')}</label>
                     <Slider value={[params.sgnD]} onValueChange={([v])=>setParams(p=>({...p, sgnD: Number(v)}))} min={-1} max={1} step={0.01}/>
-                    <div className="text-xs">{fmt(params.sgnD,2)} (−1 distruttiva · +1 costruttiva)</div>
+                    <div className="text-xs">{fmt(params.sgnD,2)} (−1 {t('destructive')} · +1 {t('constructive')})</div>
 
-                    <label className="text-sm font-medium">|D| — Intensità decisioni</label>
+                    <label className="text-sm font-medium">{t('intensity')}</label>
                     <Slider value={[params.absD]} onValueChange={([v])=>setParams(p=>({...p, absD: Number(v)}))} min={0} max={10} step={0.1}/>
                     <div className="text-xs">{fmt(params.absD,1)} (0→10)</div>
                   </div>
 
                   <div className="grid gap-4">
-                    <label className="text-sm font-medium">K(D) — Amplificazione</label>
+                    <label className="text-sm font-medium">{t('amplification')}</label>
                     <Slider value={[params.K]} onValueChange={([v])=>setParams(p=>({...p, K: Number(v)}))} min={0.1} max={12} step={0.01}/>
                     <div className="text-xs">{fmt(params.K,2)}</div>
 
-                    <label className="text-sm font-medium">ξ(t) — Casualità favorevole</label>
+                    <label className="text-sm font-medium">{t('serendipity')}</label>
                     <Slider value={[params.xi]} onValueChange={([v])=>setParams(p=>({...p, xi: Number(v)}))} min={0} max={5} step={0.01}/>
                     <div className="text-xs">{fmt(params.xi,2)}</div>
 
-                    <label className="text-sm font-medium">C(N) — Influenza del network</label>
+                    <label className="text-sm font-medium">{t('networkInfluence')}</label>
                     <Slider value={[params.CN]} onValueChange={([v])=>setParams(p=>({...p, CN: Number(v)}))} min={-1} max={1} step={0.01}/>
                     <div className="text-xs">{fmt(params.CN,2)} (−1→+1)</div>
 
-                    <label className="text-sm font-medium">B(t) — Biforcazione</label>
+                    <label className="text-sm font-medium">{t('bifurcation')}</label>
                     <Slider value={[params.B]} onValueChange={([v])=>setParams(p=>({...p, B: Number(v)}))} min={0} max={8} step={0.01}/>
                     <div className="text-xs">{fmt(params.B,2)} (0→8+)</div>
 
-                    <label className="text-sm font-medium">J(t) — Sincronicità junghiana</label>
+                    <label className="text-sm font-medium">{t('synchronicity')}</label>
                     <Slider value={[params.J]} onValueChange={([v])=>setParams(p=>({...p, J: Number(v)}))} min={0} max={10} step={0.01}/>
                     <div className="text-xs">{fmt(params.J,2)} (0→10)</div>
                   </div>
@@ -460,13 +521,13 @@ export default function Page(){
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium">Ω — frequenza (rad/giorno)</label>
+                    <label className="text-sm font-medium">{t('frequency')}</label>
                     <Input type="number" value={params.Omega} onChange={e=>setParams(p=>({...p, Omega: Number(e.target.value)}))} />
                   </div>
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium">t — giorni nel ciclo</label>
+                    <label className="text-sm font-medium">{t('daysInCycle')}</label>
                     <Slider value={[params.tDays]} onValueChange={([v])=>setParams(p=>({...p, tDays: Number(v)}))} min={0} max={180} step={1}/>
-                    <div className="text-xs">{fmt(params.tDays,0)} giorni</div>
+                    <div className="text-xs">{fmt(params.tDays,0)} {t('days')}</div>
                   </div>
                 </div>
 
@@ -474,9 +535,9 @@ export default function Page(){
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-neutral-500">
-                        <th className="py-2">Termine</th>
-                        <th className="py-2">Valore</th>
-                        <th className="py-2">Hint</th>
+                        <th className="py-2">{t('term')}</th>
+                        <th className="py-2">{t('value')}</th>
+                        <th className="py-2">{t('hint')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -498,13 +559,13 @@ export default function Page(){
             <div className="grid lg:grid-cols-2 gap-6">
               <Card className="rounded-2xl h-[360px]">
                 <CardContent className="p-4 h-full">
-                  <div className="text-sm text-neutral-500 mb-2 flex items-center gap-2">Radar parametri normalizzati</div>
+                  <div className="text-sm text-neutral-500 mb-2 flex items-center gap-2">{t('radarTitle')}</div>
                   <ResponsiveContainer width="100%" height="100%">
                     <RadarChart data={radarData}>
                       <PolarGrid />
                       <PolarAngleAxis dataKey="metric" />
                       <PolarRadiusAxis angle={30} domain={[0, 1]} />
-                      <Radar name="Valore" dataKey="value" />
+                      <Radar name={t('value')} dataKey="value" />
                       <Legend />
                     </RadarChart>
                   </ResponsiveContainer>
@@ -513,10 +574,10 @@ export default function Page(){
 
               <Card className="rounded-2xl h-[360px]">
                 <CardContent className="p-4 h-full">
-                  <div className="text-sm text-neutral-500 mb-2 flex items-center gap-2">Contributi (approssimati) ai termini</div>
+                  <div className="text-sm text-neutral-500 mb-2 flex items-center gap-2">{t('contributionsTitle')}</div>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={[
-                      { name: "Inversione·δ", value: Math.pow(-1, params.P) * params.delta },
+                      { name: "(-1)^P·δ", value: Math.pow(-1, params.P) * params.delta },
                       { name: "sgn(D)·|D|·K", value: params.sgnD * params.absD * params.K },
                       { name: "ξ·C(N)·(1+B·J)", value: params.xi * params.CN * (1 + params.B * params.J) },
                     ]}>
@@ -525,7 +586,7 @@ export default function Page(){
                       <YAxis />
                       <ReTooltip />
                       <Legend />
-                      <Bar dataKey="value" name="Peso" />
+                      <Bar dataKey="value" name={t('weight')} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -537,25 +598,25 @@ export default function Page(){
             <div className="grid md:grid-cols-3 gap-6">
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
-                  <div className="text-sm font-medium mb-3">✅ PRO — Elementi favorevoli</div>
+                  <div className="text-sm font-medium mb-3">{t('prosTitle')}</div>
                   <ul className="list-disc pl-5 space-y-2 text-sm">
-                    {tips.pros.length > 0 ? tips.pros.map((t,i)=>(<li key={i}>{t}</li>)) : <li className="text-neutral-400">Nessun elemento favorevole rilevato con parametri attuali</li>}
+                    {tips.pros.length > 0 ? tips.pros.map((tip,i)=>(<li key={i}>{tip}</li>)) : <li className="text-neutral-400">{t('noPros')}</li>}
                   </ul>
                 </CardContent>
               </Card>
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
-                  <div className="text-sm font-medium mb-3">⚠️ CONTRO — Rischi e ostacoli</div>
+                  <div className="text-sm font-medium mb-3">{t('consTitle')}</div>
                   <ul className="list-disc pl-5 space-y-2 text-sm">
-                    {tips.cons.length > 0 ? tips.cons.map((t,i)=>(<li key={i}>{t}</li>)) : <li className="text-neutral-400">Nessun rischio critico rilevato con parametri attuali</li>}
+                    {tips.cons.length > 0 ? tips.cons.map((tip,i)=>(<li key={i}>{tip}</li>)) : <li className="text-neutral-400">{t('noCons')}</li>}
                   </ul>
                 </CardContent>
               </Card>
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
-                  <div className="text-sm font-medium mb-3">🎯 AZIONI — Passi concreti</div>
+                  <div className="text-sm font-medium mb-3">{t('actionsTitle')}</div>
                   <ul className="list-disc pl-5 space-y-2 text-sm">
-                    {tips.actions.map((t,i)=>(<li key={i}>{t}</li>))}
+                    {tips.actions.map((tip,i)=>(<li key={i}>{tip}</li>))}
                   </ul>
                 </CardContent>
               </Card>
@@ -565,20 +626,20 @@ export default function Page(){
           <TabsContent value="about">
             <Card className="rounded-2xl">
               <CardContent className="p-6 grid gap-4 text-sm leading-relaxed">
-                <div className="text-lg font-semibold">Formula generale</div>
+                <div className="text-lg font-semibold">{t('formulaTitle')}</div>
                 <div className="font-mono text-xs overflow-x-auto p-3 bg-neutral-100 rounded-lg">
                   Ψ(t) = Σ[(-1)^P · δ(i,j) + sgn(D) · |D| · K(D)] · e^(−iΩt) + ξ(t) · C(N) · [1 + B(t) · J(t)]
                 </div>
-                <p>Questa app implementa una <span className="font-medium">metafora matematica</span> per aiutare il ragionamento decisionale: non è un modello scientifico, e i risultati non sono predizioni. I parametri si possono stimare dal prompt e poi perfezionare manualmente.</p>
+                <p dangerouslySetInnerHTML={{ __html: t('formulaDescription') }}></p>
                 <ul className="list-disc pl-5 grid gap-2">
-                  <li><span className="font-medium">P</span>: overthinking (0/1) – inversione energetica.</li>
-                  <li><span className="font-medium">δ(i,j)</span>: connessione/sincronia interpersonale.</li>
-                  <li><span className="font-medium">sgn(D), |D|, K(D)</span>: direzione, intensità e amplificazione delle azioni.</li>
-                  <li><span className="font-medium">e^{"{"}-iΩt{"}"}</span>: cicli personali (Ω) e fase (t).</li>
-                  <li><span className="font-medium">ξ(t), C(N)</span>: casualità e influenza del network.</li>
-                  <li><span className="font-medium">B(t), J(t)</span>: momenti critici e sincronicità.</li>
+                  <li>{t('formulaP')}</li>
+                  <li>{t('formulaDelta')}</li>
+                  <li>{t('formulaSgn')}</li>
+                  <li>{t('formulaExp')}</li>
+                  <li>{t('formulaXi')}</li>
+                  <li>{t('formulaB')}</li>
                 </ul>
-                <div className="text-xs text-neutral-500">Suggerimento: salva il JSON, ripeti l'analisi ogni settimana per vedere come cambia |Ψ|².</div>
+                <div className="text-xs text-neutral-500">{t('formulaTip')}</div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -586,87 +647,83 @@ export default function Page(){
           <TabsContent value="legend">
             <Card className="rounded-2xl">
               <CardContent className="p-6 grid gap-5 text-sm leading-relaxed">
-                <div className="text-lg font-semibold">Legenda del Valore Ψ(t)</div>
+                <div className="text-lg font-semibold">{t('legendTitle')}</div>
           
                 <div className="font-mono text-xs overflow-x-auto p-3 bg-neutral-100 rounded-lg">
                   Ψ(t) = Σ[(-1)^P · δ(i,j) + sgn(D) · |D| · K(D)] · e^(−iΩt) + ξ(t) · C(N) · [1 + B(t) · J(t)]
                 </div>
           
-                {/* 1) Ampiezza |Ψ| */}
                 <div>
-                  <div className="text-sm font-medium mb-2">1) Ampiezza |Ψ(t)| — Intensità complessiva del potenziale</div>
+                  <div className="text-sm font-medium mb-2">{t('legendAmplitude')}</div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-left text-neutral-500">
-                          <th className="py-2">Intervallo</th>
-                          <th className="py-2">Interpretazione</th>
-                          <th className="py-2">Azione</th>
+                          <th className="py-2">{t('interval')}</th>
+                          <th className="py-2">{t('interpretation')}</th>
+                          <th className="py-2">{t('action')}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-t"><td className="py-2">0.00–0.50</td><td className="py-2">Campo debole, dispersione</td><td className="py-2">Focalizza 1 obiettivo</td></tr>
-                        <tr className="border-t"><td className="py-2">0.51–1.50</td><td className="py-2">Stabilità neutra</td><td className="py-2">Aumenta δ(i,j) con feedback</td></tr>
-                        <tr className="border-t"><td className="py-2">1.51–3.00</td><td className="py-2">Coerenza parziale</td><td className="py-2">Mantieni ritmo e direzione</td></tr>
-                        <tr className="border-t"><td className="py-2">3.01–5.00</td><td className="py-2">Coerenza elevata</td><td className="py-2">Agisci ora</td></tr>
-                        <tr className="border-t"><td className="py-2">&gt; 5.00</td><td className="py-2">Risonanza eccessiva</td><td className="py-2">Rallenta, evita saturazione</td></tr>
+                        <tr className="border-t"><td className="py-2">0.00–0.50</td><td className="py-2">{t('weakField')}</td><td className="py-2">{t('focusGoal')}</td></tr>
+                        <tr className="border-t"><td className="py-2">0.51–1.50</td><td className="py-2">{t('neutralStability')}</td><td className="py-2">{t('increaseDelta')}</td></tr>
+                        <tr className="border-t"><td className="py-2">1.51–3.00</td><td className="py-2">{t('partialCoherence')}</td><td className="py-2">{t('maintainRhythm')}</td></tr>
+                        <tr className="border-t"><td className="py-2">3.01–5.00</td><td className="py-2">{t('highCoherence')}</td><td className="py-2">{t('actNow')}</td></tr>
+                        <tr className="border-t"><td className="py-2">&gt; 5.00</td><td className="py-2">{t('excessiveResonance')}</td><td className="py-2">{t('slowDown')}</td></tr>
                       </tbody>
                     </table>
                   </div>
                 </div>
           
-                {/* 2) Fase Arg(Ψ) */}
                 <div>
-                  <div className="text-sm font-medium mb-2">2) Fase Arg(Ψ) — Stato ciclico e orientamento temporale</div>
+                  <div className="text-sm font-medium mb-2">{t('legendPhase')}</div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-left text-neutral-500">
-                          <th className="py-2">Arg(Ψ) (rad)</th>
-                          <th className="py-2">Fase</th>
-                          <th className="py-2">Significato</th>
+                          <th className="py-2">{t('phaseRad')}</th>
+                          <th className="py-2">{t('phaseName')}</th>
+                          <th className="py-2">{t('meaning')}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-t"><td className="py-2">≈ 0</td><td className="py-2">Azione</td><td className="py-2">Allineamento, procedi</td></tr>
-                        <tr className="border-t"><td className="py-2">π/4→π/2</td><td className="py-2">Transizione</td><td className="py-2">Stabilizza decisioni</td></tr>
-                        <tr className="border-t"><td className="py-2">≈ π</td><td className="py-2">Inversione</td><td className="py-2">Overthinking, rischio auto-sabotaggio</td></tr>
-                        <tr className="border-t"><td className="py-2">&gt; π</td><td className="py-2">Retrograda</td><td className="py-2">Ripetizione pattern: rivedi K(D), sgn(D)</td></tr>
+                        <tr className="border-t"><td className="py-2">≈ 0</td><td className="py-2">{t('actionPhase')}</td><td className="py-2">{t('alignmentProceed')}</td></tr>
+                        <tr className="border-t"><td className="py-2">π/4→π/2</td><td className="py-2">{t('transitionPhase')}</td><td className="py-2">{t('stabilizeDecisions')}</td></tr>
+                        <tr className="border-t"><td className="py-2">≈ π</td><td className="py-2">{t('inversionPhase')}</td><td className="py-2">{t('overthinkingRisk')}</td></tr>
+                        <tr className="border-t"><td className="py-2">&gt; π</td><td className="py-2">{t('retrogradePhase')}</td><td className="py-2">{t('patternRepetition')}</td></tr>
                       </tbody>
                     </table>
                   </div>
                 </div>
           
-                {/* 3) Densità |Ψ|² */}
                 <div>
-                  <div className="text-sm font-medium mb-2">3) Densità |Ψ|² — Potenziale manifestato</div>
+                  <div className="text-sm font-medium mb-2">{t('legendDensity')}</div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-left text-neutral-500">
                           <th className="py-2">|Ψ|²</th>
-                          <th className="py-2">Significato</th>
+                          <th className="py-2">{t('meaning')}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-t"><td className="py-2">&lt; 1</td><td className="py-2">Potenziale latente: serve azione</td></tr>
-                        <tr className="border-t"><td className="py-2">1–4</td><td className="py-2">Coerenza in crescita</td></tr>
-                        <tr className="border-t"><td className="py-2">4–9</td><td className="py-2">Campo coerente: alta probabilità</td></tr>
-                        <tr className="border-t"><td className="py-2">&gt; 9</td><td className="py-2">Sovrasaturazione: rischio interferenze</td></tr>
+                        <tr className="border-t"><td className="py-2">&lt; 1</td><td className="py-2">{t('latentPotential')}</td></tr>
+                        <tr className="border-t"><td className="py-2">1–4</td><td className="py-2">{t('growingCoherence')}</td></tr>
+                        <tr className="border-t"><td className="py-2">4–9</td><td className="py-2">{t('coherentField')}</td></tr>
+                        <tr className="border-t"><td className="py-2">&gt; 9</td><td className="py-2">{t('oversaturation')}</td></tr>
                       </tbody>
                     </table>
                   </div>
                 </div>
           
-                {/* 4) Mappa rapida */}
                 <div>
-                  <div className="text-sm font-medium mb-2">4) Mappa rapida</div>
+                  <div className="text-sm font-medium mb-2">{t('legendQuickMap')}</div>
                   <div className="grid sm:grid-cols-3 gap-3 text-xs">
-                    <div className="p-3 rounded-xl bg-neutral-100"><div className="font-medium">Energia</div><div>|Ψ| — intensità del campo</div></div>
-                    <div className="p-3 rounded-xl bg-neutral-100"><div className="font-medium">Allineamento</div><div>Arg(Ψ) — timing e fase</div></div>
-                    <div className="p-3 rounded-xl bg-neutral-100"><div className="font-medium">Manifestazione</div><div>|Ψ|² — probabilità relativa</div></div>
+                    <div className="p-3 rounded-xl bg-neutral-100"><div className="font-medium">{t('energy')}</div><div>{t('energyDesc')}</div></div>
+                    <div className="p-3 rounded-xl bg-neutral-100"><div className="font-medium">{t('alignment')}</div><div>{t('alignmentDesc')}</div></div>
+                    <div className="p-3 rounded-xl bg-neutral-100"><div className="font-medium">{t('manifestation')}</div><div>{t('manifestationDesc')}</div></div>
                   </div>
-                  <div className="text-xs text-neutral-500 mt-3">Nota: modello speculativo a scopo riflessivo/educativo.</div>
+                  <div className="text-xs text-neutral-500 mt-3">{t('speculativeNote')}</div>
                 </div>
               </CardContent>
             </Card>
@@ -674,7 +731,9 @@ export default function Page(){
 
         </Tabs>
 
-        <footer className="text-center text-xs text-neutral-500 py-6">© {new Date().getFullYear()} Destiny Ψ Analyzer — uso riflessivo/educativo.</footer>
+        <footer className="text-center text-xs text-neutral-500 py-6">
+          {t('footer').replace('{year}', currentYear.toString())}
+        </footer>
       </div>
     </div>
   );
